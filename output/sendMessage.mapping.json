@@ -1,0 +1,30 @@
+{
+  "sourcePath": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/lib/server/functions/sendMessage.ts",
+  "fileName": "sendMessage.ts",
+  "symbols": [
+    {
+      "type": "function",
+      "name": "prepareMessageObject"
+    },
+    {
+      "type": "variable_function",
+      "name": "validateAttachmentsFields"
+    },
+    {
+      "type": "variable_function",
+      "name": "validateAttachmentsActions"
+    },
+    {
+      "type": "variable_function",
+      "name": "validateAttachment"
+    },
+    {
+      "type": "variable_function",
+      "name": "validateMessage"
+    },
+    {
+      "type": "variable_function",
+      "name": "sendMessage"
+    }
+  ]
+}
