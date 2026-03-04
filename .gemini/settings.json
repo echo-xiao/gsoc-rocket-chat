@@ -1,0 +1,15 @@
+{
+  "tools": {
+    "exclude": [
+      "glob",
+      "grep_search",
+      "run_shell_command",
+      "google_web_search",
+      "read_file",
+      "list_directory",
+      "codebase_investigator",
+      "grep_search",
+      "codebase_investigator"
+    ]
+  }
+}

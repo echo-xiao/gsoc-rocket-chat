@@ -1,0 +1,43 @@
+{
+  "name": "rocket-chat-gsoc-analyzer",
+  "version": "5.0.0",
+  "description": "Advanced source code auditing extension based on AST incremental dehydration and topological mapping. Designed for large-scale monorepos like Rocket.Chat to minimize token consumption through demand-based loading.",
+  "mcpServers": {
+    "rocket-ast-analyzer": {
+      "command": "node",
+      "args": ["${extensionPath}/dist/index.js"],
+      "cwd": "${extensionPath}"
+    }
+  },
+  "agentInstructions": "You are a senior architect auditing the Rocket.Chat codebase. To stay within token budgets, you MUST strictly follow this workflow:\n1. **Path Discovery**: Never guess file paths. Use `search_mcp_prewarm_cache` first to find absolute paths.\n2. **Topology First**: Before diving into code, use `get_global_topology` to understand the dependency tree.\n3. **Skeleton Preview**: Once a file is identified, use `get_file_skeleton` to read the stripped-down AST structure. DO NOT request full source code initially.\n4. **Precision Probing**: Only when you identify a critical logic point in the skeleton (marked by /* [GSOC-REDUCTION] */) should you call `read_symbol_details` to extract the full implementation.\n5. **Routing Awareness**: Prefer Lite models for navigation and reserve the Pro model specifically for complex logic analysis via `read_symbol_details`.",
+  "tools": [
+    {
+      "name": "search_mcp_prewarm_cache",
+      "description": "[Routing: gemini-2.5-flash-lite] CRITICAL: Search for file/directory paths in the lightning-fast prewarm cache. Use this instead of built-in find tools."
+    },
+    {
+      "name": "get_file_skeleton",
+      "description": "[Routing: gemini-2.5-flash-lite] View zero-bloat, stripped-down skeleton code to understand exported structures and function signatures."
+    },
+    {
+      "name": "read_symbol_details",
+      "description": "[Routing: gemini-3.1-pro-preview] CRITICAL PROBE: Read the actual, detailed implementation logic of a specific function or class."
+    },
+    {
+      "name": "get_codebase_topology",
+      "description": "[Routing: gemini-2.5-flash-lite] Read the global dependency topology. Useful for high-level architectural analysis."
+    },
+    {
+      "name": "search_symbol",
+      "description": "[Routing: gemini-2.5-flash-lite] Quickly locate the exact file path where a specific symbol (function/class) is defined."
+    },
+    {
+      "name": "find_references",
+      "description": "[Routing: gemini-2.5-flash-lite] Find all files that import or depend on a specific module or symbol."
+    },
+    {
+      "name": "get_system_config",
+      "description": "Retrieve the system configuration and internal LLM routing rules."
+    }
+  ]
+}

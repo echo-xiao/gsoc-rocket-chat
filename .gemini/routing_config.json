@@ -1,0 +1,15 @@
+{
+  "routing": {
+    "lite": "gemini-2.5-flash-lite",
+    "pro": "gemini-3.1-pro-preview",
+    "standard": "gemini-2.5-flash"
+  },
+  "tool_assignments": {
+    "get_codebase_topology": "lite",
+    "get_file_skeleton": "lite",
+    "search_symbol": "lite",
+    "search_mcp_prewarm_cache": "lite",
+    "find_references": "standard",
+    "read_symbol_details": "pro"
+  }
+}

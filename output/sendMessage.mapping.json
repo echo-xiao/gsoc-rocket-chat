@@ -1,26 +1,60 @@
 {
-  "sourcePath": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/lib/server/functions/sendMessage.ts",
+  "sourcePath": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/sendMessage.ts",
   "fileName": "sendMessage.ts",
+  "imports": [
+    {
+      "module": "@rocket.chat/core-typings",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/packages/core-typings"
+    },
+    {
+      "module": "./processMessageEditing",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/processMessageEditing.ts"
+    },
+    {
+      "module": "./processSetReaction",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/processSetReaction.ts"
+    },
+    {
+      "module": "./processSlashCommand",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/processSlashCommand.ts"
+    },
+    {
+      "module": "./processTooLongMessage",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/processTooLongMessage.ts"
+    },
+    {
+      "module": "../../../../app/utils/client/lib/SDKClient",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/utils/client/lib/SDKClient.ts"
+    },
+    {
+      "module": "../../../../app/utils/lib/i18n",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/utils/lib/i18n.ts"
+    },
+    {
+      "module": "../../../../lib/utils/closeUnclosedCodeBlock",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/lib/utils/closeUnclosedCodeBlock.ts"
+    },
+    {
+      "module": "../../../stores",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/stores"
+    },
+    {
+      "module": "../../onClientBeforeSendMessage",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/onClientBeforeSendMessage.ts"
+    },
+    {
+      "module": "../../toast",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/toast.ts"
+    },
+    {
+      "module": "../ChatAPI",
+      "resolved": "/Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/ChatAPI.ts"
+    }
+  ],
   "symbols": [
     {
-      "type": "function",
-      "name": "prepareMessageObject"
-    },
-    {
       "type": "variable_function",
-      "name": "validateAttachmentsFields"
-    },
-    {
-      "type": "variable_function",
-      "name": "validateAttachmentsActions"
-    },
-    {
-      "type": "variable_function",
-      "name": "validateAttachment"
-    },
-    {
-      "type": "variable_function",
-      "name": "validateMessage"
+      "name": "process"
     },
     {
       "type": "variable_function",
