@@ -4,12 +4,12 @@
   "description": "Advanced source code auditing extension based on AST incremental dehydration and topological mapping. Designed for large-scale monorepos like Rocket.Chat to minimize token consumption through demand-based loading.",
   "mcpServers": {
     "rocket-ast-analyzer": {
-      "command": "node",
-      "args": ["${extensionPath}/dist/index.js"],
+      "command": "npx",
+      "args": ["tsx", "${extensionPath}/src/indexer/index.ts"],
       "cwd": "${extensionPath}"
     }
   },
-  "agentInstructions": "You are a senior architect auditing the Rocket.Chat codebase. To stay within token budgets, you MUST strictly follow this workflow:\n1. **Path Discovery**: Never guess file paths. Use `search_mcp_prewarm_cache` first to find absolute paths.\n2. **Topology First**: Before diving into code, use `get_global_topology` to understand the dependency tree.\n3. **Skeleton Preview**: Once a file is identified, use `get_file_skeleton` to read the stripped-down AST structure. DO NOT request full source code initially.\n4. **Precision Probing**: Only when you identify a critical logic point in the skeleton (marked by /* [GSOC-REDUCTION] */) should you call `read_symbol_details` to extract the full implementation.\n5. **Routing Awareness**: Prefer Lite models for navigation and reserve the Pro model specifically for complex logic analysis via `read_symbol_details`.",
+  "agentInstructions": "ALWAYS use MCP tools. NEVER use built-in file tools. KEY ROUTING: (1) symbol/function/class NAME (e.g. canUpdateMessage, sendMessage) → search_symbol. (2) file or directory PATH fragment (e.g. server/methods, updateMessage.ts) → search_mcp_prewarm_cache. (3) view file exports → get_file_skeleton. (4) read implementation → read_symbol_details. (5) who imports a file → find_references. (6) architecture → get_codebase_topology. IMPORTANT: search_symbol is for symbol names, search_mcp_prewarm_cache is for path strings only.",
   "tools": [
     {
       "name": "search_mcp_prewarm_cache",

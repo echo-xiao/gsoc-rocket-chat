@@ -10,5 +10,6 @@
     "jsx": "react-jsx"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "Rocket.Chat", "output", "dist"]
+  "exclude": [
+    "../node_modules", "Rocket.Chat", "output", "dist"]
 }

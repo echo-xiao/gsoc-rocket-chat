@@ -1,111 +1,98 @@
+# Rocket.Chat Code Analyzer
 
-# 🚀 Rocket.Chat GSoC Analyzer (MCP Server)
+GSoC project — an MCP server that lets Gemini CLI explore the Rocket.Chat codebase without reading full source files.
 
-A **Model Context Protocol (MCP) Server** powered by incremental AST caching and a global memory topology index, designed to definitively solve LLM token overflow and retrieval performance bottlenecks when analyzing massive codebases like Rocket.Chat.
+**Core idea:** use ts-morph to strip function bodies from every `.ts` file, build an in-memory index with PageRank + BM25, and expose 7 MCP tools over stdio. Gemini gets ~4x token savings and all built-in file tools are disabled — it can only navigate via MCP.
 
-## ✨ Core Features
+## Thoughts
 
-* **Extreme Context Dehydration (AST)**: Leverages `ts-morph` for AST-level code reduction. It automatically extracts file skeletons (stripping away function and class implementations) and exposes specific logic only when requested, minimizing LLM token consumption.
-* **Millisecond Incremental Pre-warming**: Features a built-in, MD5-based incremental compilation engine. It automatically scans the codebase and generates `.hash_cache.json` to eliminate inefficient, redundant parsing.
-* **Global Memory Topology Index**: Constructs a comprehensive relationship graph in memory upon startup, mapping all symbols and file dependency chains (imports).
-* **Advanced Hybrid Search Engine**: Combines system-level `grep` coarse filtering, precise AST verification, and BFS (Breadth-First Search) topology pruning algorithms for fast and highly accurate code retrieval.
+This is a Search Evaluation problem - focusing on retrival and recall.
+1. The tools are straightforward now, but the real challenge is getting the LLM to actually follow instructions and invoke them reliably.
+2. For the last version, I/O latency was killing me. Gemini would "over-think" while waiting for a response, padding the context and burning through tokens. I fixed this by pre-warming an offline index, allowing for instant in-memory lookups.
+3. I also improved tool depth. I moved from a basic grep to a 3-tier fallback strategy to ensure comprehensive coverage without needing external search.
+4. Last but not least, the evaluation suite enables me to tracking token burn versus precision gains. 
 
-## 🛠️ Exposed MCP Tools
-
-This Server exposes the following core capabilities to various Agents or IDEs (e.g., Cursor, Claude Desktop) via the standardized MCP protocol:
-
-* `search_mcp_prewarm_cache`: Lightning-fast file path search based on the pre-warmed cache.
-* `search_symbol`: Quickly locates the exact physical path where a specific symbol (function, class, variable) is **defined** (combining Grep + AST verification).
-* `find_references`: Utilizes the global dependency topology to find all files that import or depend on a specific module or symbol (optimized with BFS pruning).
-* `get_file_skeleton`: Reads lightweight, stripped-down skeleton files free from implementation noise to quickly grasp a module's exported structure.
-* `read_symbol_details`: **Critical Probe**. Reads the detailed implementation logic of a symbol on demand (supports paginated `startLine` reading to prevent single-turn token overflow).
-* `get_codebase_topology`: Outputs the global dependency topology of the codebase (supports JSON or Mermaid format).
-* `get_system_config`: Retrieves system-level LLM routing rules and configurations.
-
-## 🚀 Quick Start
-
-
-
-Run the entry file using Node.js. Upon startup, the Server automatically performs incremental pre-warming and builds the memory index, then establishes an MCP connection with the client:
+## Setup
 
 ```bash
-npm run start:bg
-gemini
+git clone https://github.com/echo-xiao/gsoc-rocket-chat.git
+cd gsoc-rocket-chat
+npm install
 
+# Rocket.Chat source goes here
+git clone https://github.com/RocketChat/Rocket.Chat.git
+
+npm start
 ```
 
+First run scans the full codebase and generates skeletons. Subsequent runs are incremental — only changed files are reprocessed (MD5 hash cache).
 
+Add to Gemini CLI MCP config:
 
-## 💡 Example Prompts (For Agents & LLMs)
+```json
+{
+  "mcpServers": {
+    "rocket-ast-analyzer": {
+      "command": "npx",
+      "args": ["tsx", "/path/to/gsoc-rocket-chat/src/indexer/index.ts"]
+    }
+  }
+}
+```
 
-You can use the following prompts in your Gemini-Cli to fully utilize the server's analytical pipeline:
+## Tools
 
-Here is the statistics for running these six prompt:
-![0.png](stats/0.png)
+| Tool | What it does |
+|------|-------------|
+| `search_symbol` | Find where a symbol is defined. Tries exact match → prefix → fuzzy+BM25+PageRank, returns top 5 ranked results. |
+| `search_mcp_prewarm_cache` | Find files by path fragment against the in-memory file set. |
+| `get_file_skeleton` | Return a file's skeleton — types, interfaces, signatures, no bodies. |
+| `read_symbol_details` | Return symbol skeleton + up to 5 callee skeletons. Disambiguates same-name symbols via caller's import graph. |
+| `find_references` | BFS over the dependency graph, results grouped by depth (max 5 levels). |
+| `get_codebase_topology` | Top-K symbols by PageRank score, or list all files that import a given file. |
+| `get_system_config` | Index stats, token compression rate, current session call metrics. |
 
-* **Macro Exploration:**
-> "Use the `search_mcp_prewarm_cache` tool to help me locate the `app/lib/server/functions` directory."
+## Session recording & eval
 
-![1.png](stats/1.png)
+```bash
+alias gemini='npx tsx /path/to/gsoc-rocket-chat/src/eval/session-recorder.ts'
+```
 
-* **Topology Analysis:**
-> "Use the `get_codebase_topology` tool to help me analyze the primary dependencies of the files in the `app/lib/server/functions` directory."
+Wraps Gemini CLI with `script` to record the full terminal session, then auto-generates logs and an eval report after each session.
 
-![2.png](stats/2.png)
-* **Symbol Definition Discovery:**
-> "Call the `search_symbol` tool to search for the keyword `updateMessage` and tell me which files in the Monorepo define it."
+Output:
+- `logs/session-*.txt` — clean extracted conversation
+- `logs/session-*.raw.txt` — full ANSI-stripped terminal output
+- `logs/eval-*.md` — 3-part eval report (session summary / metrics / turn-by-turn breakdown)
 
-![3.png](stats/3.png)
+Metrics: SNR, repeat call rate, cost per task, recall@K, ambiguity resolution, shadow variable interference, reference depth.
 
-* **Blast Radius & Impact Analysis:**
-> "Call the `find_references` tool to identify all files that reference the symbol `updateMessage`. Based on the codebase topology dependency graph, please analyze and list the most heavily impacted core modules."
+## Architecture
 
-![6.1.png](stats/6.1.png)
-![6.2.png](stats/6.2.png)
+![architecture.jpg](architecture.jpg)
 
-* **Type & Interface Verification:**
-> "Show me the `get_file_skeleton` for `updateMessage.ts`. I need to verify its exported function signatures and parameter types."
+## Project structure
 
-![4.1.png](stats/4.1.png)
-![4.2.png](stats/4.2.png)
-* **Deep Logic Probe:**
-> "I see the `/* [GSOC-REDUCTION] */` placeholder in the skeleton of `updateMessage.ts`. Please call `read_symbol_details` for the `updateMessage` function; I need to examine its full permission validation logic."
-
-![5.png](stats/5.png)
-
-
-
-
-
-
-## ⚠️ Known Issues & Limitations
-
-When dealing with large-scale dynamic frameworks, the current version has the following stability and interaction caveats:
-
-* **AI Infinite Loops & Crashes due to Index Misses**:
-The current AST parser (based on `ts-morph`) primarily extracts top-level functions and classes, missing core framework methods defined inside object literals (e.g., `Meteor.methods`). When the `find_references` tool fails to find a symbol in the memory index, it returns a hard "not found" string. This hard interruption triggers the LLM's error recovery mechanism, causing it to enter an infinite loop of trying other tools, which eventually leads to system-level crashes (HTTP 500) due to high concurrency or timeouts.
-* **LLM Reasoning Latency vs. Explicit Tool Invocation**:
-In standard natural language prompts, even when explicitly instructed to use a tool, the LLM still goes through a lengthy "reasoning" and planning phase, resulting in high latency. In contrast, directly and explicitly invoking the underlying tools (Direct Tool Invocation) speeds up execution exponentially.
-* **Scheduling Conflicts with Built-in Tools**:
-The LLM sometimes prioritizes its built-in file search or environment analysis tools over the specialized MCP tools provided by this plugin. A preliminary fix has been applied by disabling certain built-in tools via configuration (e.g., `tools.exclude` in `settings.json`), forcing the model to route requests through the custom AST analysis toolchain.
-
----
-
-## 🚀 Future Roadmap
-
-As an advanced code analysis plugin designed for `gemini-cli`, the following deep optimizations are planned to achieve production-level robustness and intelligence:
-
-### 1. Deep AST Extraction Enhancement
-
-* **Object Property Parsing**: Modify the `AstMutationGenerator` to recursively traverse `ObjectLiteralExpression` nodes, accurately capturing core framework methods defined inside objects (such as `updateMessage()`).
-* **Cross-Package Alias Resolution**: Add path mapping support for internal monorepo packages/aliases (like `@rocket.chat/models`) to eliminate module resolution blind spots.
-
-### 2. Extreme Robustness & Graceful Degradation
-
-* **Tool-Level Automatic Fallback**: When `find_references` fails to locate a target in the `GLOBAL_INDEX` memory index, **it should not throw an error to the AI**. Instead, the tool should seamlessly and automatically degrade to a brute-force text search using `grep` and return potential matches.
-* **I/O Exception Isolation**: Add strict `try-catch` blocks for `fs.readFileSync` and `JSON.parse` during the `search_mcp_prewarm_cache` and index loading phases. Silently skip corrupted cache files to completely prevent a single bad file from crashing the entire server with an HTTP 500 error.
-
-
-### 3. Moving Towards Semantic Search
-
-* Pure AST and string matching have their structural limits. A future iteration will introduce lightweight local Embedding models (or utilize the Gemini Embedding API) during the cache pre-warming phase. This will enable "description-based" code retrieval (e.g., searching for "user login logic" to directly locate the target function) rather than relying solely on exact symbol names.
+```
+src/
+  indexer/
+    index.ts              MCP server entry: pre-warm → load/build index → serve
+    skeleton.ts           AST dehydration — strips bodies, extracts symbol calls
+    hasher.ts             MD5 incremental cache
+    centrality.ts         PageRank over file dependency graph (graphology)
+    state.ts              GLOBAL_INDEX definition + BM25 term index builder
+  pipeline/
+    retriever.ts          fuzzy+BM25 hybrid search + callee context builder
+    reranker.ts           intent-aware reranking (definition vs implementation)
+  tools/
+    registry.ts           MCP tool definitions + all request handlers
+    orchestrator.ts       re-exports registry (avoids circular deps)
+  storage/
+    local-db.ts           serialize/deserialize GLOBAL_INDEX to output/.global_index.json
+  eval/
+    session-recorder.ts   record sessions, generate eval reports
+    token-analyzer.ts     SNR / repeat call rate / cost per task
+    precision-evaluator.ts  recall@K / ambiguity resolution / shadow vars / ref depth
+output/                   generated skeletons, mappings, index cache (gitignored)
+logs/                     session logs, eval reports (gitignored)
+```

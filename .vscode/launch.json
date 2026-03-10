@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug MCP Server",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--max-old-space-size=8192",
+        "--loader",
+        "ts-node/esm"
+      ],
+      "args": ["${workspaceFolder}/src/index.ts"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Debug Test Script",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--max-old-space-size=8192",
+        "--loader",
+        "ts-node/esm"
+      ],
+      "args": ["${file}"],
+      "console": "integratedTerminal"
+    }
+  ]
+}
