@@ -7,6 +7,7 @@ output/
 # 忽略环境变量（如果你有 API Key 的话）
 npm-deug.log*
 .env
+.png
 
 # 忽略编译产物
 dist/
