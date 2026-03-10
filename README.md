@@ -69,7 +69,8 @@ Metrics: SNR, repeat call rate, cost per task, recall@K, ambiguity resolution, s
 
 ## Architecture
 
-![architecture.jpg](architecture.jpg)
+![architecture](https://github.com/user-attachments/assets/73aec555-72a2-45a4-9c61-6a24825ca3be)
+
 
 ## Project structure
 
