@@ -1,26 +1,32 @@
 {
   "autoAccept": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "name": "inject-mcp-instructions",
+            "type": "command",
+            "command": "node /Users/echoooooo/Desktop/code/gsoc-rocket-chat/.gemini/hooks/sessionstart.mjs"
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "name": "block-builtin-tools",
+            "type": "command",
+            "command": "node /Users/echoooooo/Desktop/code/gsoc-rocket-chat/.gemini/hooks/beforetool.mjs"
+          }
+        ]
+      }
+    ]
+  },
   "policy": {
-    "tools": {
-      "glob": "deny",
-      "grep_search": "deny",
-      "search_file_content": "deny",
-      "run_shell_command": "deny",
-      "google_web_search": "deny",
-      "web_fetch": "deny",
-      "read_file": "deny",
-      "read_many_files": "deny",
-      "list_directory": "deny",
-      "list_directory_tree": "deny",
-      "read_folder": "deny",
-      "write_file": "deny",
-      "replace": "deny",
-      "edit_file": "deny",
-      "create_file": "deny",
-      "ask_user": "deny",
-      "write_todos": "deny",
-      "codebase_investigator": "deny"
-    },
     "agents": {
       "codebase_investigator": "deny"
     }

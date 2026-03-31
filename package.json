@@ -2,11 +2,10 @@
   "name": "gemini-mcp-code-analyzer",
   "version": "1.0.0",
   "description": "Advanced Code Analyzer with AST Reduction and Gemini",
-  "main": "dist/index.js",
+  "main": "src/indexer/index.ts",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "prewarm": "NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx src/test-dehydrator.ts",
+    "prewarm": "NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx src/indexer/index.ts --prewarm",
     "start": "NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx src/indexer/index.ts",
     "inspect": "npx @modelcontextprotocol/inspector npx tsx src/indexer/index.ts",
     "gemini": "gemini",

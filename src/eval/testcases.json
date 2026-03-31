@@ -1,0 +1,380 @@
+[
+  {
+    "id": "tour-04-msg-client",
+    "question": "How is a message sent on the client side in Rocket.Chat?",
+    "questionType": "architecture",
+    "subsystem": "message chat",
+    "difficulty": "medium",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/client/views/room/body/RoomBody.tsx",
+      "apps/meteor/client/views/room/composer/ComposerContainer.tsx",
+      "apps/meteor/client/views/room/composer/ComposerMessage.tsx",
+      "apps/meteor/client/views/room/composer/messageBox/MessageBox.tsx",
+      "apps/meteor/client/lib/chats/ChatAPI.ts",
+      "apps/meteor/client/lib/chats/flows/sendMessage.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/client/views/room/body/RoomBody.tsx", "symbol": "RoomBody" },
+      { "file": "apps/meteor/client/views/room/composer/ComposerContainer.tsx", "symbol": "ComposerContainer" },
+      { "file": "apps/meteor/client/views/room/composer/ComposerMessage.tsx", "symbol": "onSend" },
+      { "file": "apps/meteor/client/views/room/composer/messageBox/MessageBox.tsx", "symbol": "handleSendMessage" },
+      { "file": "apps/meteor/client/lib/chats/ChatAPI.ts", "symbol": "ChatAPI" },
+      { "file": "apps/meteor/client/lib/chats/flows/sendMessage.ts", "symbol": "sendMessage" }
+    ],
+    "keySymbols": ["handleSendMessage", "onSend", "ChatAPI", "sendMessage", "ComposerMessage"]
+  },
+  {
+    "id": "tour-05-msg-server",
+    "question": "How is a message sent on the server side in Rocket.Chat?",
+    "questionType": "call-chain",
+    "subsystem": "message chat",
+    "difficulty": "hard",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/client/lib/chats/ChatAPI.ts",
+      "apps/meteor/app/ui/client/lib/ChatMessages.ts",
+      "apps/meteor/client/lib/chats/flows/sendMessage.ts",
+      "apps/meteor/app/lib/server/methods/sendMessage.ts",
+      "apps/meteor/app/lib/server/functions/sendMessage.ts",
+      "apps/meteor/app/lib/client/methods/sendMessage.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/client/lib/chats/ChatAPI.ts", "symbol": "ChatAPI" },
+      { "file": "apps/meteor/app/ui/client/lib/ChatMessages.ts", "symbol": "ChatMessages" },
+      { "file": "apps/meteor/client/lib/chats/flows/sendMessage.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/lib/server/methods/sendMessage.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/lib/server/functions/sendMessage.ts", "symbol": "executeSendMessage" },
+      { "file": "apps/meteor/app/lib/client/methods/sendMessage.ts", "symbol": "sendMessage" }
+    ],
+    "keySymbols": ["executeSendMessage", "sendMessage", "ChatMessages"]
+  },
+  {
+    "id": "tour-06-endpoint",
+    "question": "How do you create a new REST API endpoint in Rocket.Chat?",
+    "questionType": "pattern",
+    "subsystem": "api",
+    "difficulty": "medium",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/app/api/server/index.ts",
+      "apps/meteor/app/api/server/api.ts",
+      "apps/meteor/app/api/server/v1/chat.ts",
+      "apps/meteor/app/lib/server/methods/sendMessage.ts",
+      "apps/meteor/client/lib/chats/flows/sendMessage.ts",
+      "apps/meteor/app/utils/client/lib/SDKClient.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/app/api/server/index.ts", "symbol": "API" },
+      { "file": "apps/meteor/app/api/server/api.ts", "symbol": "APIClass" },
+      { "file": "apps/meteor/app/api/server/v1/chat.ts", "symbol": "addRoute" },
+      { "file": "apps/meteor/app/lib/server/methods/sendMessage.ts", "symbol": "executeSendMessage" },
+      { "file": "apps/meteor/client/lib/chats/flows/sendMessage.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/utils/client/lib/SDKClient.ts", "symbol": "call" }
+    ],
+    "keySymbols": ["addRoute", "APIClass", "createApi", "executeSendMessage"]
+  },
+  {
+    "id": "tour-07-db-model-create",
+    "question": "How do you create a new database model in Rocket.Chat?",
+    "questionType": "pattern",
+    "subsystem": "database",
+    "difficulty": "medium",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/server/models/raw/Messages.ts",
+      "apps/meteor/server/models/Messages.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/server/models/raw/Messages.ts", "symbol": "MessagesRaw" },
+      { "file": "apps/meteor/server/models/Messages.ts", "symbol": "registerModel" }
+    ],
+    "keySymbols": ["BaseRaw", "MessagesRaw", "registerModel"]
+  },
+  {
+    "id": "tour-08-db-model-use",
+    "question": "How do you use a database model to query data in Rocket.Chat?",
+    "questionType": "pattern",
+    "subsystem": "database",
+    "difficulty": "medium",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/server/methods/loadHistory.ts",
+      "apps/meteor/app/lib/server/functions/loadMessageHistory.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/server/methods/loadHistory.ts", "symbol": "loadHistory" },
+      { "file": "apps/meteor/app/lib/server/functions/loadMessageHistory.ts", "symbol": "loadMessageHistory" }
+    ],
+    "keySymbols": ["loadHistory", "loadMessageHistory"]
+  },
+  {
+    "id": "tour-10-new-service",
+    "question": "How do you add a new service in Rocket.Chat?",
+    "questionType": "pattern",
+    "subsystem": "services",
+    "difficulty": "hard",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "apps/meteor/server/services/room/service.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/server/services/room/service.ts", "symbol": "RoomService" },
+      { "file": "apps/meteor/server/services/room/service.ts", "symbol": "create" },
+      { "file": "apps/meteor/server/services/room/service.ts", "symbol": "createDirectMessage" },
+      { "file": "apps/meteor/server/services/room/service.ts", "symbol": "createDirectMessageWithMultipleUsers" }
+    ],
+    "keySymbols": ["ServiceClassInternal", "IRoomService", "RoomService", "createDirectMessage"]
+  },
+  {
+    "id": "tour-11-new-package",
+    "question": "How do you create a new package in the Rocket.Chat monorepo?",
+    "questionType": "pattern",
+    "subsystem": "tooling",
+    "difficulty": "medium",
+    "source": "RC.Guided.Tours",
+    "groundTruthFiles": [
+      "packages/account-utils/tsconfig.json",
+      "packages/account-utils/src/index.ts",
+      "apps/meteor/app/api/server/middlewares/authentication.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "packages/account-utils/tsconfig.json", "symbol": "" },
+      { "file": "packages/account-utils/src/index.ts", "symbol": "hashLoginToken" },
+      { "file": "apps/meteor/app/api/server/middlewares/authentication.ts", "symbol": "hashLoginToken" }
+    ],
+    "keySymbols": ["hashLoginToken"]
+  },
+  {
+    "id": "claude-01-push-notifications",
+    "question": "How do push notifications work in Rocket.Chat?",
+    "questionType": "architecture",
+    "subsystem": "push notifications",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/app/lib/server/lib/sendNotificationsOnMessage.ts",
+      "apps/meteor/app/lib/server/functions/notifications/mobile.js",
+      "apps/meteor/app/notification-queue/server/NotificationQueue.ts",
+      "apps/meteor/app/push-notifications/server/lib/PushNotification.ts",
+      "apps/meteor/app/push/server/push.ts",
+      "apps/meteor/app/push/server/apn.ts",
+      "apps/meteor/app/push/server/fcm.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/app/lib/server/lib/sendNotificationsOnMessage.ts", "symbol": "sendNotificationsOnMessage" },
+      { "file": "apps/meteor/app/lib/server/functions/notifications/mobile.js", "symbol": "shouldNotifyMobile" },
+      { "file": "apps/meteor/app/notification-queue/server/NotificationQueue.ts", "symbol": "NotificationQueue" },
+      { "file": "apps/meteor/app/push-notifications/server/lib/PushNotification.ts", "symbol": "PushNotification" },
+      { "file": "apps/meteor/app/push/server/push.ts", "symbol": "PushClass" },
+      { "file": "apps/meteor/app/push/server/apn.ts", "symbol": "sendNotificationNative" },
+      { "file": "apps/meteor/app/push/server/fcm.ts", "symbol": "sendNotificationNative" }
+    ],
+    "keySymbols": ["shouldNotifyMobile", "NotificationQueue", "PushNotification", "PushClass", "sendNotificationGateway"]
+  },
+  {
+    "id": "claude-02-msg-permissions",
+    "question": "Where is the logic for message permission validation located?",
+    "questionType": "locate",
+    "subsystem": "authorization",
+    "difficulty": "medium",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/app/lib/server/methods/sendMessage.ts",
+      "apps/meteor/app/authorization/server/functions/canSendMessage.ts",
+      "apps/meteor/app/lib/server/functions/sendMessage.ts",
+      "apps/meteor/app/authorization/server/functions/canAccessRoom.ts",
+      "apps/meteor/app/authorization/server/functions/hasPermission.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/app/lib/server/methods/sendMessage.ts", "symbol": "executeSendMessage" },
+      { "file": "apps/meteor/app/authorization/server/functions/canSendMessage.ts", "symbol": "canSendMessageAsync" },
+      { "file": "apps/meteor/app/authorization/server/functions/canSendMessage.ts", "symbol": "validateRoomMessagePermissionsAsync" },
+      { "file": "apps/meteor/app/lib/server/functions/sendMessage.ts", "symbol": "validateMessage" }
+    ],
+    "keySymbols": ["canSendMessageAsync", "validateRoomMessagePermissionsAsync", "executeSendMessage", "validateMessage"]
+  },
+  {
+    "id": "claude-03-file-upload",
+    "question": "What is the storage workflow for file uploads in Rocket.Chat?",
+    "questionType": "architecture",
+    "subsystem": "file upload",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/client/lib/chats/flows/uploadFiles.ts",
+      "apps/meteor/client/lib/chats/uploads.ts",
+      "apps/meteor/app/api/server/v1/rooms.ts",
+      "apps/meteor/app/api/server/lib/MultipartUploadHandler.ts",
+      "apps/meteor/app/file-upload/server/lib/FileUpload.ts",
+      "apps/meteor/server/ufs/ufs-methods.ts",
+      "apps/meteor/app/file-upload/server/methods/sendFileMessage.ts",
+      "apps/meteor/server/ufs/ufs-store.ts",
+      "apps/meteor/server/ufs/ufs-gridfs.ts",
+      "apps/meteor/app/file-upload/ufs/AmazonS3/server.ts",
+      "apps/meteor/app/file-upload/server/lib/requests.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/client/lib/chats/flows/uploadFiles.ts", "symbol": "uploadFiles" },
+      { "file": "apps/meteor/client/lib/chats/uploads.ts", "symbol": "UploadsStore" },
+      { "file": "apps/meteor/app/api/server/v1/rooms.ts", "symbol": "roomsMedia" },
+      { "file": "apps/meteor/app/api/server/lib/MultipartUploadHandler.ts", "symbol": "MultipartUploadHandler" },
+      { "file": "apps/meteor/app/file-upload/server/lib/FileUpload.ts", "symbol": "FileUploadClass" },
+      { "file": "apps/meteor/server/ufs/ufs-methods.ts", "symbol": "ufsComplete" },
+      { "file": "apps/meteor/app/file-upload/server/methods/sendFileMessage.ts", "symbol": "parseFileIntoMessageAttachments" }
+    ],
+    "keySymbols": ["uploadFiles", "UploadsStore", "MultipartUploadHandler", "FileUploadClass", "ufsComplete", "parseFileIntoMessageAttachments"]
+  },
+  {
+    "id": "claude-04-e2e-encryption",
+    "question": "How are the keys managed for end-to-end (E2E) encryption in Rocket.Chat?",
+    "questionType": "architecture",
+    "subsystem": "e2e encryption",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/client/lib/e2ee/rocketchat.e2e.ts",
+      "apps/meteor/client/lib/e2ee/rocketchat.e2e.room.ts",
+      "apps/meteor/client/lib/e2ee/keychain.ts",
+      "apps/meteor/client/lib/e2ee/crypto/rsa.ts",
+      "apps/meteor/client/lib/e2ee/crypto/aes.ts",
+      "apps/meteor/client/lib/e2ee/crypto/pbkdf2.ts",
+      "apps/meteor/client/lib/e2ee/content.ts",
+      "apps/meteor/client/lib/e2ee/prefixed.ts",
+      "apps/meteor/app/e2e/server/functions/resetRoomKey.ts",
+      "apps/meteor/app/e2e/server/functions/provideUsersSuggestedGroupKeys.ts",
+      "apps/meteor/server/lib/resetUserE2EKey.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/client/lib/e2ee/rocketchat.e2e.ts", "symbol": "createAndLoadKeys" },
+      { "file": "apps/meteor/client/lib/e2ee/rocketchat.e2e.room.ts", "symbol": "createGroupKey" },
+      { "file": "apps/meteor/client/lib/e2ee/keychain.ts", "symbol": "Keychain" },
+      { "file": "apps/meteor/client/lib/e2ee/crypto/rsa.ts", "symbol": "generateRSAKey" },
+      { "file": "apps/meteor/client/lib/e2ee/crypto/aes.ts", "symbol": "generateAESKey" },
+      { "file": "apps/meteor/app/e2e/server/functions/resetRoomKey.ts", "symbol": "resetRoomKey" },
+      { "file": "apps/meteor/server/lib/resetUserE2EKey.ts", "symbol": "resetUserE2EEncriptionKey" }
+    ],
+    "keySymbols": ["createAndLoadKeys", "createGroupKey", "Keychain", "resetRoomKey", "resetUserE2EEncriptionKey", "initiateKeyDistribution"]
+  },
+  {
+    "id": "claude-05-call-chain",
+    "question": "What is the complete call chain for sendMessage?",
+    "questionType": "call-chain",
+    "subsystem": "message chat",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/client/lib/chats/flows/sendMessage.ts",
+      "apps/meteor/app/lib/server/methods/sendMessage.ts",
+      "apps/meteor/app/api/server/v1/chat.ts",
+      "apps/meteor/app/lib/server/functions/sendMessage.ts",
+      "apps/meteor/app/authorization/server/functions/canSendMessage.ts",
+      "apps/meteor/app/lib/server/lib/afterSaveMessage.ts",
+      "apps/meteor/app/lib/server/lib/sendNotificationsOnMessage.ts",
+      "apps/meteor/app/notification-queue/server/NotificationQueue.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/client/lib/chats/flows/sendMessage.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/lib/server/methods/sendMessage.ts", "symbol": "executeSendMessage" },
+      { "file": "apps/meteor/app/api/server/v1/chat.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/authorization/server/functions/canSendMessage.ts", "symbol": "canSendMessageAsync" },
+      { "file": "apps/meteor/app/authorization/server/functions/canSendMessage.ts", "symbol": "validateRoomMessagePermissionsAsync" },
+      { "file": "apps/meteor/app/lib/server/functions/sendMessage.ts", "symbol": "sendMessage" },
+      { "file": "apps/meteor/app/lib/server/functions/sendMessage.ts", "symbol": "validateMessage" },
+      { "file": "apps/meteor/app/lib/server/lib/afterSaveMessage.ts", "symbol": "afterSaveMessage" },
+      { "file": "apps/meteor/app/lib/server/lib/sendNotificationsOnMessage.ts", "symbol": "sendAllNotifications" },
+      { "file": "apps/meteor/app/notification-queue/server/NotificationQueue.ts", "symbol": "NotificationQueue" }
+    ],
+    "keySymbols": ["executeSendMessage", "canSendMessageAsync", "validateRoomMessagePermissionsAsync", "sendMessage", "validateMessage", "afterSaveMessage", "sendAllNotifications", "NotificationQueue"]
+  },
+  {
+    "id": "claude-06-livechat-routing",
+    "question": "How are Livechat requests routed to the server-side in Rocket.Chat?",
+    "questionType": "routing",
+    "subsystem": "livechat",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "packages/livechat/src/api.ts",
+      "packages/livechat/src/widget.ts",
+      "apps/meteor/app/livechat/server/api/v1/room.ts",
+      "apps/meteor/app/livechat/server/lib/QueueManager.ts",
+      "apps/meteor/app/livechat/server/lib/RoutingManager.ts",
+      "apps/meteor/app/livechat/server/lib/routing/AutoSelection.ts",
+      "apps/meteor/app/livechat/server/lib/routing/ManualSelection.ts",
+      "apps/meteor/app/livechat/server/lib/routing/External.ts",
+      "apps/meteor/app/livechat/server/lib/conditionalLockAgent.ts",
+      "apps/meteor/app/livechat/server/lib/hooks.ts",
+      "apps/meteor/ee/app/livechat-enterprise/server/lib/routing/LoadBalancing.ts",
+      "apps/meteor/ee/app/livechat-enterprise/server/lib/routing/LoadRotation.ts",
+      "apps/meteor/ee/app/livechat-enterprise/server/hooks/beforeRoutingChat.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "packages/livechat/src/api.ts", "symbol": "LivechatClientImpl" },
+      { "file": "packages/livechat/src/widget.ts", "symbol": "widget" },
+      { "file": "apps/meteor/app/livechat/server/api/v1/room.ts", "symbol": "createRoom" },
+      { "file": "apps/meteor/app/livechat/server/lib/QueueManager.ts", "symbol": "requestRoom" },
+      { "file": "apps/meteor/app/livechat/server/lib/RoutingManager.ts", "symbol": "delegateInquiry" },
+      { "file": "apps/meteor/app/livechat/server/lib/RoutingManager.ts", "symbol": "takeInquiry" },
+      { "file": "apps/meteor/app/livechat/server/lib/conditionalLockAgent.ts", "symbol": "conditionalLockAgent" }
+    ],
+    "keySymbols": ["QueueManager", "RoutingManager", "requestRoom", "delegateInquiry", "takeInquiry", "LivechatClientImpl"]
+  },
+  {
+    "id": "claude-07-api-endpoints",
+    "question": "How are new endpoints registered in the REST API in Rocket.Chat?",
+    "questionType": "locate",
+    "subsystem": "api",
+    "difficulty": "medium",
+    "source": "claude",
+    "groundTruthFiles": [
+      "apps/meteor/app/api/server/api.ts",
+      "apps/meteor/app/api/server/ApiClass.ts",
+      "apps/meteor/app/api/server/router.ts",
+      "apps/meteor/app/api/server/definition.ts",
+      "apps/meteor/app/api/server/ajv.ts",
+      "apps/meteor/app/api/server/middlewares/authenticationHono.ts",
+      "apps/meteor/app/api/server/middlewares/permissions.ts",
+      "apps/meteor/app/api/server/index.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "apps/meteor/app/api/server/api.ts", "symbol": "createApi" },
+      { "file": "apps/meteor/app/api/server/ApiClass.ts", "symbol": "APIClass" },
+      { "file": "apps/meteor/app/api/server/ApiClass.ts", "symbol": "addRoute" },
+      { "file": "apps/meteor/app/api/server/ApiClass.ts", "symbol": "_internalRouteActionHandler" },
+      { "file": "apps/meteor/app/api/server/router.ts", "symbol": "RocketChatAPIRouter" },
+      { "file": "apps/meteor/app/api/server/middlewares/authenticationHono.ts", "symbol": "authenticationMiddleware" },
+      { "file": "apps/meteor/app/api/server/middlewares/permissions.ts", "symbol": "permissionsMiddleware" }
+    ],
+    "keySymbols": ["addRoute", "APIClass", "createApi", "_internalRouteActionHandler", "RocketChatAPIRouter"]
+  },
+  {
+    "id": "claude-08-federation",
+    "question": "How are federation messages sent across different servers in Rocket.Chat?",
+    "questionType": "routing",
+    "subsystem": "federation",
+    "difficulty": "hard",
+    "source": "claude",
+    "groundTruthFiles": [
+      "ee/packages/federation-matrix/src/FederationMatrix.ts",
+      "ee/packages/federation-matrix/src/api/routes.ts",
+      "ee/packages/federation-matrix/src/api/_matrix/transactions.ts",
+      "ee/packages/federation-matrix/src/api/middlewares/isAuthenticated.ts",
+      "ee/packages/federation-matrix/src/events/message.ts",
+      "ee/packages/federation-matrix/src/helpers/message.parsers.ts",
+      "ee/packages/federation-matrix/src/services/MatrixMediaService.ts",
+      "apps/meteor/ee/server/hooks/federation/index.ts",
+      "apps/meteor/server/services/federation/Settings.ts"
+    ],
+    "groundTruthPath": [
+      { "file": "ee/packages/federation-matrix/src/FederationMatrix.ts", "symbol": "FederationMatrix" },
+      { "file": "ee/packages/federation-matrix/src/FederationMatrix.ts", "symbol": "sendMessage" },
+      { "file": "ee/packages/federation-matrix/src/api/_matrix/transactions.ts", "symbol": "processIncomingTransaction" },
+      { "file": "ee/packages/federation-matrix/src/api/middlewares/isAuthenticated.ts", "symbol": "isAuthenticatedMiddleware" },
+      { "file": "ee/packages/federation-matrix/src/events/message.ts", "symbol": "saveMessageFromFederation" },
+      { "file": "apps/meteor/ee/server/hooks/federation/index.ts", "symbol": "FederationActions" },
+      { "file": "apps/meteor/server/services/federation/Settings.ts", "symbol": "generateFederationKeys" }
+    ],
+    "keySymbols": ["FederationMatrix", "processIncomingTransaction", "saveMessageFromFederation", "FederationActions", "generateFederationKeys"]
+  }
+]

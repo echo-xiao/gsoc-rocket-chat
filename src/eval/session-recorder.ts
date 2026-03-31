@@ -11,6 +11,7 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { Evaluator } from './evaluator.js';
 
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const LOGS_DIR   = path.join(__dirname, '..', '..', 'logs');
@@ -20,22 +21,11 @@ fs.mkdirSync(LOGS_DIR, { recursive: true });
 
 // Must be defined before generateReport() is called (const is not hoisted)
 const MCP_TOOLS: Record<string, string> = {
-  search_symbol:            'fuzzy+BM25 dual search → PageRank weighting → intent rerank',
-  search_mcp_prewarm_cache: 'path fuzzy match against allFiles Set',
-  get_file_skeleton:        'reads pre-generated .skeleton.ts dehydrated AST',
-  read_symbol_details:      'getContext() + callee skeleton concat',
-  get_codebase_topology:    'PageRank scores / fileDependents reverse index',
-  find_references:          'BFS over fileDependents map (max 5 levels)',
-  get_system_config:        'session tracking stats + token compression rate',
+  search:   'symbol index (exact→prefix→fuzzy) + file path substring + call-pattern grep',
+  explore:  'skeleton + upstream callers for all exported symbols',
+  implement: 'actual source implementation + callee skeletons (filename required)',
 };
 
-const BUILTIN_TOOLS: Record<string, string> = {
-  Shell:      'executes shell command directly (bypasses MCP)',
-  ReadFile:   'reads raw source file contents',
-  ReadFolder: 'lists directory contents',
-  SearchText: 'regex text search',
-  FindFiles:  'file path search',
-};
 
 const timestamp  = new Date().toISOString().replace(/[:.]/g, '-');
 const rawFile    = path.join(LOGS_DIR, `session-${timestamp}.raw`);
@@ -88,6 +78,7 @@ for (const f of fs.readdirSync(LOGS_DIR)) {
     fs.unlinkSync(path.join(LOGS_DIR, f));
 }
 console.log(`📋 Report:  logs/${path.basename(evalFile)}`);
+fs.unlinkSync(rawTxtFile);;
 
 // =============================================================================
 // 报告生成
@@ -103,11 +94,10 @@ async function generateReport(log: string): Promise<string> {
   // ── Part 1: Session Summary ─────────────────────────────────────────────────
   sections.push(part1_sessionSummary(log));
 
-  // ── Part 2: Metrics ─────────────────────────────────────────────────────────
-  sections.push(await part2_metrics(log));
-
-  // ── Part 3: Operation Analysis ──────────────────────────────────────────────
-  sections.push(part3_operationAnalysis(log));
+  // ── Part 2: Actual vs Expected ───────────────────────────────────────────────
+  const { part2, part3 } = await part2_and_part3(log);
+  if (part2) sections.push(part2);
+  if (part3) sections.push(part3);
 
   return sections.join('\n---\n\n');
 }
@@ -137,278 +127,114 @@ function part1_sessionSummary(log: string): string {
 }
 
 // =============================================================================
-// Part 2 · Metrics
-// 调用 TokenAnalyzer 和 PrecisionEvaluator
+// Part 2 · Actual vs Expected  +  Part 3 · Details
 // =============================================================================
 
-async function part2_metrics(log: string): Promise<string> {
-  const lines: string[] = ['## Part 2 · Metrics\n'];
+async function part2_and_part3(log: string): Promise<{ part2: string; part3: string }> {
+  const ev = new Evaluator();
+  const testcasesPath = path.join(__dirname, 'testcases.json');
+  const result = ev.evaluateErrorTypes(log, testcasesPath);
 
-  // ── Token Efficiency ────────────────────────────────────────────────────────
-  const { TokenAnalyzer } = await import('./token-analyzer.js');
-  const ta = new TokenAnalyzer();
+  if (result.matchedTurns === 0 && result.errors.length === 0) return { part2: '', part3: '' };
 
-  const snr    = ta.evaluateSNR(log, OUTPUT_DIR, RC_SRC_DIR);
-  const repeat = ta.evaluateRepeatCallRate(log);
-  const cost   = ta.evaluateTaskCost(log, RC_SRC_DIR, OUTPUT_DIR);
+  const sm = result.sessionMetrics;
+  const mt = result.matchedTurns;
 
-  lines.push('### Token Efficiency\n');
-  lines.push('#### Signal-to-Noise Ratio\n');
-  lines.push(`**Avg SNR**: ${snr.avgSNR}  ${snr.verdict}\n`);
-  if (snr.results.length > 0) {
-    lines.push('| Query | Tool | Symbol | Skeleton IDs | Used | SNR |');
-    lines.push('|-------|------|--------|-------------|------|-----|');
-    for (const r of snr.results) {
-      lines.push(`| ${r.query} | \`${r.tool}\` | ${r.symbol} | ${r.skeletonIdentifiers} | ${r.referencedInAnswer} | **${r.snr}** |`);
-    }
-    if (snr.fatSkeletons.length > 0) {
-      lines.push(`\n> ⚠️ Fat skeletons (SNR < 30%): ${snr.fatSkeletons.map(f => f.symbol).join(', ')}`);
-      lines.push(`> Unused identifiers sample: ${snr.fatSkeletons[0]?.unusedTopK.join(', ')}`);
-    }
-  } else {
-    lines.push('> No skeleton-returning tool calls found in session.\n');
-  }
+  // ── Part 2 ─────────────────────────────────────────────────────────────────
+  const p2: string[] = ['## Part 2 · Actual vs Expected\n'];
+  p2.push('> Automated comparison of each error type against its detection threshold.\n');
+  p2.push(`**${result.verdict}**\n`);
 
-  lines.push('\n#### Repeat Call Rate\n');
-  lines.push(`**Repeat Rate**: ${repeat.repeatRate}  ${repeat.verdict}\n`);
-  lines.push(`| Metric | Value |\n|--------|-------|\n| Total Calls | ${repeat.totalCalls} |\n| Unique Symbols | ${repeat.uniqueSymbols} |\n| Repeated | ${repeat.repeatedSymbols} |`);
-  if (repeat.hotSymbols.length > 0) {
-    lines.push('\n**Repeated symbols:**');
-    for (const h of repeat.hotSymbols) {
-      lines.push(`- \`${h.symbol}\` called ×${h.callCount} via [${h.tools.join(', ')}]`);
-      lines.push(`  Queries: ${h.queries.map(q => `"${q.substring(0, 50)}"`).join(' / ')}`);
-    }
-  }
+  p2.push('| Error Type | Expected | Actual | Status |');
+  p2.push('|------------|----------|--------|--------|');
 
-  lines.push('\n#### Cost per Task\n');
-  lines.push(`**Avg Saved**: ${cost.avgSaved}  ${cost.verdict}\n`);
-  if (cost.results.length > 0) {
-    lines.push('| Query | Files | Full Tokens | Skeleton Tokens | Compression | Saved | ✓ |');
-    lines.push('|-------|-------|------------|-----------------|-------------|-------|---|');
-    for (const r of cost.results) {
-      const mark = r.meetsTarget ? '✅' : '⚠️';
-      lines.push(`| ${r.query.substring(0, 50)} | ${r.filesAccessed} | ${r.fullCodeTokens} | ${r.skeletonTokens} | ${r.compressionRatio} | ${r.savedPercent} | ${mark} |`);
-    }
-  } else {
-    lines.push('> No file-accessing tool calls found in session.\n');
-  }
+  // Session-level metrics
+  const tooMany = sm.totalCalls > sm.threshold;
+  p2.push(`| Too many tool calls | ≤ ${sm.threshold} calls | ${sm.totalCalls} calls | ${tooMany ? '❌' : '✅'} |`);
 
-  // ── Search Precision ────────────────────────────────────────────────────────
-  lines.push('\n### Search Precision\n');
+  const rsdPct = (sm.rsdShare * 100).toFixed(1);
+  const rsdOver = sm.rsdShare > 0.30;
+  const rsdUnder = sm.totalCalls > 0 && sm.rsdShare < 0.05;
+  const rsdStatus = (rsdOver || rsdUnder) ? '❌' : '✅';
+  const rsdNote = rsdOver ? ' (overuse)' : rsdUnder ? ' (underuse)' : '';
+  p2.push(`| implement overuse | 5%–30% share | ${rsdPct}% (${sm.rsdCount}/${sm.totalCalls})${rsdNote} | ${rsdStatus} |`);
 
-  try {
-    const { LocalDatabase } = await import('../storage/local-db.js');
-    const loaded = new LocalDatabase().loadIndex();
-    if (!loaded) throw new Error('Index not available');
+  // Per-turn metrics
+  const totalSymbols  = result.turnSummaries.reduce((n, ts) => n + ts.symbols.length, 0);
+  const foundSymbols  = result.turnSummaries.reduce((n, ts) => n + ts.symbols.filter(s => s.found).length, 0);
+  const totalFiles    = result.turnSummaries.reduce((n, ts) => n + ts.files.length, 0);
+  const retrievedFiles = result.turnSummaries.reduce((n, ts) => n + ts.files.filter(f => f.retrieved).length, 0);
+  p2.push(`| Missing key fact | 100% coverage per turn | ${foundSymbols}/${totalSymbols} symbols found | ${foundSymbols === totalSymbols ? '✅' : '❌'} |`);
+  p2.push(`| Wrong file retrieved | ≥ 95% hit rate per turn | ${retrievedFiles}/${totalFiles} files retrieved | ${retrievedFiles === totalFiles ? '✅' : '❌'} |`);
 
-    const { PrecisionEvaluator } = await import('./precision-evaluator.js');
-    const pe = new PrecisionEvaluator();
+  // ── Part 3 ─────────────────────────────────────────────────────────────────
+  const p3: string[] = ['## Part 3 · Details\n'];
 
-    // Recall@K
-    const recall = pe.evaluateRecallFromSession(log);
-    lines.push('#### Recall@K\n');
-    lines.push(`${recall.verdict}\n`);
-    if (recall.total > 0) {
-      lines.push(`| Metric | Score |\n|--------|-------|\n| Recall@1 | ${recall.hit1} |\n| Recall@5 | ${recall.hit5} |\n| Recall@10 | ${recall.hit10} |\n| Cases | ${recall.total} |`);
-      if (recall.cases.length > 0) {
-        lines.push('\n| Query | Expected | Source | Rank | @1 |');
-        lines.push('|-------|----------|--------|------|-----|');
-        for (const c of recall.cases) {
-          lines.push(`| ${c.query} | \`${c.expected}\` | ${c.source} | #${c.rank} | ${c.inTop1 ? '✅' : '❌'} |`);
-        }
-      }
-    }
+  if (result.turnSummaries.length > 0) {
+    for (const ts of result.turnSummaries) {
+      p3.push(`### Q: \`${ts.question.substring(0, 80)}\`\n`);
 
-    // 同名冲突
-    const ambig = pe.evaluateAmbiguityFromSession(log);
-    lines.push('\n#### Ambiguity Resolution\n');
-    lines.push(`${ambig.verdict}\n`);
-    if (ambig.allAmbiguousInIndex.length > 0) {
-      lines.push(`**Top ambiguous symbols in index:**`);
-      for (const a of ambig.allAmbiguousInIndex.slice(0, 5)) {
-        lines.push(`- \`${a.symbol}\`: ${a.definitions} definitions (${a.files.join(', ')})`);
-      }
-    }
-    if (ambig.results.length > 0) {
-      lines.push('\n| Symbol | Definitions | Expected | Resolved |');
-      lines.push('|--------|------------|---------|---------|');
-      for (const r of ambig.results) {
-        lines.push(`| \`${r.symbol}\` | ${r.totalDefinitions} | ${r.expectedKeyword} | ${r.resolved ? '✅' : '❌'} |`);
-      }
-    }
-
-    // 阴影变量
-    const shadow = pe.evaluateShadowVarsFromSession(log);
-    lines.push('\n#### Shadow Variable Interference\n');
-    lines.push(`${shadow.verdict}\n`);
-    if (shadow.results.length > 0) {
-      lines.push('| Query | Top-5 Symbols | Leaked | |');
-      lines.push('|-------|--------------|--------|--|');
-      for (const r of shadow.results) {
-        lines.push(`| ${r.query} | ${r.top5Symbols.join(', ')} | ${r.leakedSymbols.join(', ') || '—'} | ${r.hasLeak ? '⚠️' : '✅'} |`);
-      }
-    }
-    if (shadow.globalSuspiciousSample.length > 0) {
-      lines.push(`\n> Global suspicious symbols in index (${shadow.globalSuspiciousCount} total): \`${shadow.globalSuspiciousSample.join('`, `')}\``);
-    }
-
-    // 引用路径空洞
-    const depth = pe.evaluateReferenceDepthFromSession(log);
-    lines.push('\n#### Reference Depth\n');
-    lines.push(`${depth.verdict}\n`);
-    if (depth.results.length > 0) {
-      lines.push('| Target | Depth-1 | Depth-2 | Depth-3 | Growth | |');
-      lines.push('|--------|---------|---------|---------|--------|--|');
-      for (const r of depth.results) {
-        lines.push(`| \`${r.target}\` | ${r.depth1} | ${r.depth2} | ${r.depth3} | ${r.growth} | ${r.hasIndirect ? '✅' : '🔴'} |`);
-      }
-    }
-
-  } catch (e: any) {
-    lines.push(`> ⚠️ Precision evaluation skipped: ${e.message}`);
-    lines.push('> Run the indexer first to load the global symbol index.\n');
-  }
-
-  return lines.join('\n');
-}
-
-// =============================================================================
-// Part 3 · Operation Analysis
-// 按对话轮次分析每次操作用了哪些工具、走了哪条路径
-// =============================================================================
-
-function part3_operationAnalysis(log: string): string {
-  const lines  = log.split('\n');
-  const turns  = parseTurns(lines);
-  const out: string[] = ['## Part 3 · Operation Analysis\n'];
-
-  // MCP vs built-in 汇总
-  const mcpCount     = turns.flatMap(t => t.calls).filter(c => c.isMCP).length;
-  const builtinCount = turns.flatMap(t => t.calls).filter(c => !c.isMCP).length;
-  out.push(`**${turns.length} turns** · **${mcpCount} MCP calls** · **${builtinCount} built-in calls**\n`);
-
-  for (const [idx, turn] of turns.entries()) {
-    out.push(`### Turn ${idx + 1}: "${turn.query}"\n`);
-
-    if (turn.calls.length === 0) {
-      out.push('- No tool calls (AI responded from context)\n');
-    } else {
-      for (const call of turn.calls) {
-        if (call.isMCP) {
-          out.push(`- **[MCP]** \`${call.tool}\``);
-          out.push(`  - Args: \`${JSON.stringify(call.args)}\``);
-          out.push(`  - How: ${MCP_TOOLS[call.tool] ?? 'MCP tool'}`);
-          out.push(`  - Status: ${call.status}`);
-        } else {
-          out.push(`- **[Built-in]** \`${call.tool}\``);
-          out.push(`  - How: ${BUILTIN_TOOLS[call.tool] ?? 'built-in tool'}`);
-          if (call.snippet) out.push(`  - \`${call.snippet}\``);
-          out.push(`  - Status: ${call.status}`);
-        }
-      }
-    }
-
-    const aiSummary = turn.aiLines.slice(0, 2).join(' ').substring(0, 120);
-    if (aiSummary) out.push(`\n> ✦ ${aiSummary}…\n`);
-    out.push('');
-  }
-
-  // 工具分工总表
-  out.push('### Tool Distribution\n');
-  out.push('| Type | Tool | Count |');
-  out.push('|------|------|-------|');
-  const toolCounts = new Map<string, { isMCP: boolean; count: number }>();
-  for (const call of turns.flatMap(t => t.calls)) {
-    const e = toolCounts.get(call.tool) ?? { isMCP: call.isMCP, count: 0 };
-    e.count++;
-    toolCounts.set(call.tool, e);
-  }
-  for (const [tool, { isMCP, count }] of [...toolCounts.entries()].sort((a, b) => b[1].count - a[1].count)) {
-    out.push(`| ${isMCP ? 'MCP' : 'Built-in'} | \`${tool}\` | ${count} |`);
-  }
-
-  return out.join('\n');
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-interface ParsedCall {
-  tool:    string;
-  args:    Record<string, any>;
-  status:  string;
-  isMCP:   boolean;
-  snippet: string;   // first meaningful line of result (for built-in tools)
-}
-
-interface ParsedTurn {
-  query:   string;
-  calls:   ParsedCall[];
-  aiLines: string[];
-}
-
-function parseTurns(lines: string[]): ParsedTurn[] {
-  const turns: ParsedTurn[] = [];
-  let current: ParsedTurn | null = null;
-  let inBox    = false;
-  let curTool  = '';
-  let curArgs: Record<string, any> = {};
-  let curStatus = '✓';
-  let curIsMCP  = false;
-  let boxSnippet = '';
-
-  for (const line of lines) {
-    if (/^ > [^/]/.test(line) && !line.includes('Type your message')) {
-      if (current) turns.push(current);
-      current = { query: line.replace(/^ > /, '').trim(), calls: [], aiLines: [] };
-      continue;
-    }
-
-    if (line.startsWith('╭─')) {
-      inBox = true; curTool = ''; curArgs = {}; curStatus = '✓'; boxSnippet = '';
-      continue;
-    }
-
-    if (inBox && line.startsWith('╰─')) {
-      inBox = false;
-      if (current && curTool) {
-        current.calls.push({
-          tool:    curTool,
-          args:    curArgs,
-          status:  curStatus,
-          isMCP:   curIsMCP,
-          snippet: boxSnippet,
+      // ── Files ─────────────────────────────────────────────────────────────
+      if (ts.files.length > 0) {
+        p3.push('**Files**\n');
+        p3.push('| # | File | Expected | Actual |');
+        p3.push('|---|------|----------|--------|');
+        ts.files.forEach((f, i) => {
+          const retrievedLabel = f.retrieved ? `✅ Retrieved${f.source ? ` (${f.source})` : ''}` : '❌ Not found';
+          p3.push(`| ${i + 1} | \`${f.path}\` | ✅ Required | ${retrievedLabel} |`);
         });
+        p3.push('');
       }
-      continue;
-    }
 
-    if (inBox) {
-      // Tool call header line: │ ✓  toolName (server) {...}
-      const header = line.match(/^│ ([✓✗])  (\S+)(?: \(([^)]*)\))? ?(\{.*)?/);
-      if (header && !curTool) {
-        curStatus = header[1];
-        curTool   = header[2];
-        curIsMCP  = (header[3] ?? '').toLowerCase().includes('mcp');
-        try { curArgs = header[4] ? JSON.parse(header[4].replace(/\s+│.*$/, '')) : {}; } catch { curArgs = {}; }
-      } else if (!boxSnippet) {
-        // First content line as snippet (for built-in tools showing the command)
-        const content = line.replace(/^│ ?/, '').trim();
-        if (content && !content.startsWith('✓') && !content.startsWith('✗')) {
-          boxSnippet = content.substring(0, 100);
+      // ── Retrieval Order ───────────────────────────────────────────────────
+      if (ts.path.length > 0) {
+        p3.push('**Retrieval Order**\n');
+
+        const expectedOrder = [...ts.path].sort((a, b) => a.expectedPos - b.expectedPos);
+        const actualOrder = [
+          ...ts.path.filter(p => p.actualPos !== null).sort((a, b) => a.actualPos! - b.actualPos!),
+          ...ts.path.filter(p => p.actualPos === null),
+        ];
+        const maxLen = Math.max(expectedOrder.length, actualOrder.length);
+
+        p3.push('| Expected Order | Actual Order |');
+        p3.push('|----------------|--------------|');
+        for (let i = 0; i < maxLen; i++) {
+          const exp = expectedOrder[i];
+          const act = actualOrder[i];
+          const expCell = exp ? `\`${exp.file}\` _(${exp.symbol})_` : '';
+          const actCell = act ? `\`${act.file}\` _(${act.symbol})_` : '';
+          p3.push(`| ${expCell} | ${actCell} |`);
+          if (i < maxLen - 1) p3.push('| ↓ | ↓ |');
         }
+        p3.push('');
       }
-      continue;
-    }
 
-    if (line.startsWith('✦ ') && current) {
-      current.aiLines.push(line.replace(/^✦ /, ''));
+      // ── Key Symbols ───────────────────────────────────────────────────────
+      if (ts.symbols.length > 0) {
+        p3.push('**Key Symbols**\n');
+        p3.push('| Symbol | Expected | Actual |');
+        p3.push('|--------|----------|--------|');
+        for (const s of ts.symbols) {
+          p3.push(`| \`${s.name}\` | ✅ Required | ${s.found ? '✅ Found' : '❌ Missing'} |`);
+        }
+        p3.push('');
+      }
     }
   }
 
-  if (current) turns.push(current);
-  return turns.filter(t => t.query !== '/quit');
+  // ── Correction hints ──────────────────────────────────────────────────────
+  if (result.errors.length > 0) {
+    p3.push('### Corrections\n');
+    for (const e of result.errors) {
+      p3.push(`**${e.verdict} ${e.type}** — \`${e.turn}\``);
+      p3.push(`- ${e.detail}`);
+      p3.push(`- 💡 ${e.correction}`);
+      p3.push('');
+    }
+  }
+
+  return { part2: p2.join('\n'), part3: p3.join('\n') };
 }
 
 // =============================================================================
@@ -458,7 +284,7 @@ function extractConversation(text: string): string {
       );
       if (!isGood) continue;
       const keyLine = boxLines.find(l => /^│ \S/.test(l) || /^│  \S/.test(l)) ?? '';
-      upsert('box:' + keyLine.replace(/\s+/g, ' ').trim().substring(0, 60), boxStart, boxLines);
+      upsert('box:' + keyLine.replace(/\s+/g, ' ').trim().substring(0, 160), boxStart, boxLines);
       continue;
     }
 

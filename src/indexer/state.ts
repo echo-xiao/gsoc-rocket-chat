@@ -1,33 +1,34 @@
 /**
- * 全局索引状态 —— 独立模块，打破 index.ts ↔ registry.ts 的循环依赖。
- * index.ts 和 registry.ts 都从这里 import，互不依赖。
+ * Global in-memory index — shared between index.ts and registry.ts to avoid circular deps.
  */
 
+export type EdgeType =
+    | 'call'             // 普通函数调用
+    | 'jsx'              // JSX 组件渲染 <Component />
+    | 'new'              // new ClassName() 实例化
+    | 'event_emit'       // callbacks.run('X') / AppEvents.emit('X')
+    | 'event_listen'     // callbacks.add('X', handler) — 通过虚拟节点 X 连接
+    | 'pubsub_publish'   // Meteor.publish('name', fn)
+    | 'pubsub_subscribe' // Meteor.subscribe('name')
+    | 'type';            // TypeScript 类型注解引用 (chat: ChatAPI)
+
+export interface CallEdge {
+    name: string;
+    edgeType: EdgeType;
+    /** event_listen 时：对应的事件名（用于在 index 中建虚拟边） */
+    event?: string;
+}
+
+export interface CallerRef {
+    caller: string;
+    file: string;
+    edgeType: EdgeType;
+}
+
 export const GLOBAL_INDEX = {
-    symbols: new Map<string, Set<string>>(),        // 符号名 -> 定义文件路径
-    fileDependents: new Map<string, Set<string>>(), // 文件 -> 哪些文件引用了它
-    symbolWeights: new Map<string, number>(),       // 符号 -> PageRank 权重
-    allFiles: new Set<string>(),
-    termIndex: new Map<string, Set<string>>()       // 拆词 term -> 匹配的符号名集合（BM25 倒排索引）
+    symbols:        new Map<string, Set<string>>(),                    // symbol name -> definition file paths
+    fileDependents: new Map<string, Set<string>>(),                    // file -> files that import it (reverse)
+    allFiles:       new Set<string>(),
+    callGraph:      new Map<string, Array<CallerRef>>(),               // callee/event -> [{caller, file, edgeType}]
+    embeddings:     new Map<string, number[]>(),                       // `${symbolName}@${filePath}` -> vector
 };
-
-/** 将 camelCase / PascalCase 符号名拆成小写 term 数组 */
-export function splitCamelCase(name: string): string[] {
-    return name
-        .replace(/([A-Z])/g, ' $1')
-        .toLowerCase()
-        .trim()
-        .split(/[\s_\-]+/)
-        .filter(t => t.length > 1);
-}
-
-/** 从 symbols Map 重建 termIndex（可在 loadIndex 后调用） */
-export function buildTermIndex() {
-    GLOBAL_INDEX.termIndex.clear();
-    for (const symbolName of GLOBAL_INDEX.symbols.keys()) {
-        for (const term of splitCamelCase(symbolName)) {
-            if (!GLOBAL_INDEX.termIndex.has(term)) GLOBAL_INDEX.termIndex.set(term, new Set());
-            GLOBAL_INDEX.termIndex.get(term)!.add(symbolName);
-        }
-    }
-}

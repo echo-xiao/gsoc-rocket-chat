@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { GENERATOR_VERSION } from '../config.js';
+
+const VERSION_KEY = '__version__';
 
 export class CodebaseHasher {
     private cachePath: string;
@@ -8,9 +11,17 @@ export class CodebaseHasher {
 
     constructor(cachePath: string) {
         this.cachePath = cachePath;
-        this.hashCache = fs.existsSync(cachePath)
-            ? JSON.parse(fs.readFileSync(cachePath, 'utf-8'))
-            : {};
+        if (fs.existsSync(cachePath)) {
+            const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+            if (cached[VERSION_KEY] === GENERATOR_VERSION) {
+                this.hashCache = cached;
+            } else {
+                console.error(`⚡ Generator version changed (${cached[VERSION_KEY] ?? 'none'} → ${GENERATOR_VERSION}), clearing hash cache.`);
+                this.hashCache = {};
+            }
+        } else {
+            this.hashCache = {};
+        }
     }
 
     /**
@@ -47,6 +58,7 @@ export class CodebaseHasher {
         const currentFiles = new Set(allScannedFiles);
         let deletedCount = 0;
         for (const cachedFile in this.hashCache) {
+            if (cachedFile === VERSION_KEY) continue;
             if (!currentFiles.has(cachedFile)) {
                 delete this.hashCache[cachedFile];
                 deletedCount++;
@@ -61,6 +73,7 @@ export class CodebaseHasher {
      * 持久化到磁盘
      */
     save() {
+        this.hashCache[VERSION_KEY] = GENERATOR_VERSION;
         fs.writeFileSync(this.cachePath, JSON.stringify(this.hashCache, null, 2));
     }
 }

@@ -1,0 +1,1002 @@
+ > How is a message sent on the client side in Rocket.Chat?
+
+✦ I will begin by searching for the sendMessage symbol and related terms
+
+✦ I will begin by searching for the sendMessage symbol and related terms within the client-side code to identify the primary message-sending mechanisms.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Action Required                                                                                                                                                                                                             │
+│                                                                                                                                                                                                                             │
+│ ?  Shell cat apps/meteor/app/lib/client/methods/sendMessage.ts [in Rocket.Chat]                                                                                                                                             │
+│                                                                                                                                                                                                                             │
+│ cat apps/meteor/app/lib/client/methods/sendMessage.ts                                                                                                                                                                       │
+│ Allow execution of: 'cat'?                                                                                                                                                                                                  │
+│                                                                                                                                                                                                                             │
+│   1. Allow once                                                                                                                                                                                                             │
+│ ● 2. Allow for this session                                                                                                                                                                                                 │
+│   3. No, suggest changes (esc)                                                                                                                                                                                              │
+│                                                                                                                                                                                                                             │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"layer":"client","query":"sendMessage"}                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ ⚠️ Architecture Note (Flow 1 — Client Message Sending):                                                                                                                                                                 │
+│ Entry point is RoomBody, NOT sendMessage. Traversing graph up from sendMessage will surface server/federation noise.                                                                                                    │
+│ Chain: RoomBody → ComposerContainer → ComposerMessage → MessageBox → sendMessage → sdk.call('sendMessage')                                                                                                              │
+│ Use implement on each component in order. graph(sendMessage, up, client) works but start from RoomBody if possible.                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ ---                                                                                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ 🎯 Symbol "sendMessage":                                                                                                                                                                                                │
+│  1. /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                        │
+│                                                                                                                                                                                                                         │
+│ 📁 Files:                                                                                                                                                                                                               │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/views/omnichannel/triggers/actions/SendMessageActionForm.tsx                                                                              │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/client/lib/onClientBeforeSendMessage.ts                                                                                                          │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/lib/client/methods/sendMessage.ts                                                                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I will trace the call graph for sendMessage to understand its
+ ⠧ Delete a conversation checkpoint with /resume delete <tag>… (esc to cancel, 3s)
+
+✦ I will trace the call graph for sendMessage to understand its dependencies and how it fits into the broader client-side message-sending flow.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  graph (rocket-ast-analyzer MCP Server) {"layer":"client","direction":"up","query":"sendMessage"}                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ Call Graph ↑ upstream of sendMessage (depth=4)                                                                                                                                                                          │
+│                                                                                                                                                                                                                         │
+│ 📍 sendMessage · apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                                                                      │
+│   ← ForwardMessageModal · apps/meteor/client/views/room/modals/ForwardMessageModal/ForwardMessageModal.tsx                                                                                                              │
+│     ← ForwardMessageAction [jsx] · apps/meteor/client/components/message/toolbar/items/actions/ForwardMessageAction.tsx                                                                                                 │
+│       ← ThreadsItems [jsx] · apps/meteor/client/components/message/toolbar/items/ThreadsItems.tsx                                                                                                                       │
+│       ← MobileItems [jsx] · apps/meteor/client/components/message/toolbar/items/MobileItems.tsx                                                                                                                         │
+│       ← DefaultItems [jsx] · apps/meteor/client/components/message/toolbar/items/DefaultItems.tsx                                                                                                                       │
+│   ← onSend, ComposerMessage · apps/meteor/client/views/room/composer/ComposerMessage.tsx                                                                                                                                │
+│     ← onSend, ComposerMessage · apps/meteor/client/views/room/composer/ComposerMessage.tsx ↩                                                                                                                            │
+│     ← ComposerContainer [jsx] · apps/meteor/client/views/room/composer/ComposerContainer.tsx                                                                                                                            │
+│       ← ThreadChat [jsx] · apps/meteor/client/views/room/contextualBar/Threads/components/ThreadChat.tsx                                                                                                                │
+│         ← Thread [jsx] · apps/meteor/client/views/room/contextualBar/Threads/Thread.tsx                                                                                                                                 │
+│           … (max depth reached)                                                                                                                                                                                         │
+│       ← RoomBody [jsx] · apps/meteor/client/views/room/body/RoomBody.tsx                                                                                                                                                │
+│         ← Room [jsx] · apps/meteor/client/views/room/Room.tsx                                                                                                                                                           │
+│           … (max depth reached)                                                                                                                                                                                         │
+│         ← RoomE2EESetup [jsx] · apps/meteor/client/views/room/E2EESetup/RoomE2EESetup.tsx                                                                                                                               │
+│           … (max depth reached)                                                                                                                                                                                         │
+│     ← ComposerOmnichannel [jsx] · apps/meteor/client/views/room/composer/ComposerOmnichannel/ComposerOmnichannel.tsx                                                                                                    │
+│       ← ComposerContainer [jsx] · apps/meteor/client/views/room/composer/ComposerContainer.tsx ↩                                                                                                                        │
+│     ← ComposerFederation [jsx] · apps/meteor/client/views/room/composer/ComposerFederation/ComposerFederation.tsx                                                                                                       │
+│       ← ComposerContainer [jsx] · apps/meteor/client/views/room/composer/ComposerContainer.tsx ↩                                                                                                                        │
+│   ← onConfirm, ShareLocationModal · apps/meteor/client/views/room/ShareLocation/ShareLocationModal.tsx                                                                                                                  │
+│     ← ShareLocationModal [jsx] · apps/meteor/client/views/room/ShareLocation/ShareLocationModal.tsx                                                                                                                     │
+│       ← handleShareLocation [jsx], useShareLocationAction [jsx] · apps/meteor/client/views/room/composer/messageBox/MessageBoxActionsToolbar/hooks/useShareLocationAction.tsx                                           │
+│         ← MessageBoxActionsToolbar · apps/meteor/client/views/room/composer/messageBox/MessageBoxActionsToolbar/MessageBoxActionsToolbar.tsx                                                                            │
+│           … (max depth reached)                                                                                                                                                                                         │
+│     ← handleShareLocation [jsx], useShareLocationAction [jsx] · apps/meteor/client/views/room/composer/messageBox/MessageBoxActionsToolbar/hooks/useShareLocationAction.tsx ↩                                           │
+│   ← process · apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                                                                         │
+│     ← sendMessage · apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                                                                   │
+│       ← process · apps/meteor/client/lib/chats/flows/sendMessage.ts ↩                                                                                                                                                   │
+│   ← useNotification · apps/meteor/client/hooks/notification/useNotification.ts                                                                                                                                          │
+│     ← PreferencesNotificationsSection · apps/meteor/client/views/account/preferences/PreferencesNotificationsSection.tsx                                                                                                │
+│       ← AccountPreferencesPage [jsx] · apps/meteor/client/views/account/preferences/AccountPreferencesPage.tsx                                                                                                          │
+│     ← useDesktopNotification · apps/meteor/client/hooks/notification/useDesktopNotification.ts                                                                                                                          │
+│       ← useNotifyUser · apps/meteor/client/views/root/hooks/loggedIn/useNotifyUser.ts                                                                                                                                   │
+│         ← LoggedInArea · apps/meteor/client/views/root/MainLayout/LoggedInArea.tsx                                                                                                                                      │
+│           … (max depth reached)                                                                                                                                                                                         │
+│   ← usePerformActionMutation · apps/meteor/client/components/message/content/attachments/default/hooks/usePerformActionMutation.ts                                                                                      │
+│     ← ActionAttachmentButton · apps/meteor/client/components/message/content/attachments/default/ActionAttachmentButton.tsx                                                                                             │
+│       ← ActionAttachment [jsx] · apps/meteor/client/components/message/content/attachments/default/ActionAttachtment.tsx                                                                                                │
+│         ← DefaultAttachment [jsx] · apps/meteor/client/components/message/content/attachments/DefaultAttachment.tsx                                                                                                     │
+│           … (max depth reached)                                                                                                                                                                                         │
+│   ← LennyFace · apps/meteor/app/slashcommand-asciiarts/client/lenny.ts                                                                                                                                                  │
+│   ← Gimme · apps/meteor/app/slashcommand-asciiarts/client/gimme.ts                                                                                                                                                      │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I will examine the implementation of sendMessage in `apps/meteor/client
+ ⠹ Delete a conversation checkpoint with /resume delete <tag>… (esc to cancel, 5s)
+
+✦ I will examine the implementation of sendMessage in apps/meteor/client/lib/chats/flows/sendMessage.ts to understand its logic for handling and dispatching messages.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"filename":"apps/meteor/client/lib/chats/flows/sendMessage.ts","symbolName":"sendMessage"}                                                                               │
+│                                                                                                                                                                                                                         │
+│ File: apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                                                                                 │
+│                                                                                                                                                                                                                         │
+│   1 export const sendMessage = async (                                                                                                                                                                                  │
+│   2     chat: ChatAPI,                                                                                                                                                                                                  │
+│   3     {                                                                                                                                                                                                               │
+│   4         text,                                                                                                                                                                                                       │
+│   5         tshow,                                                                                                                                                                                                      │
+│   6         previewUrls,                                                                                                                                                                                                │
+│   7         isSlashCommandAllowed,                                                                                                                                                                                      │
+│   8     }: { text: string; tshow?: boolean; previewUrls?: string[]; isSlashCommandAllowed?: boolean; tmid?: IMessage['tmid'] },                                                                                         │
+│   9 ): Promise<boolean> => {                                                                                                                                                                                            │
+│  10     if (!(await chat.data.isSubscribedToRoom())) {                                                                                                                                                                  │
+│  11         try {                                                                                                                                                                                                       │
+│  12             await chat.data.joinRoom();                                                                                                                                                                             │
+│  13         } catch (error) {                                                                                                                                                                                           │
+│  14             dispatchToastMessage({ type: 'error', message: error });                                                                                                                                                │
+│  15             return false;                                                                                                                                                                                           │
+│  16         }                                                                                                                                                                                                           │
+│  17     }                                                                                                                                                                                                               │
+│  18                                                                                                                                                                                                                     │
+│  19     chat.readStateManager.clearUnreadMark();                                                                                                                                                                        │
+│  20                                                                                                                                                                                                                     │
+│  21     const uploadsStore = chat.composer?.uploads;                                                                                                                                                                    │
+│  22                                                                                                                                                                                                                     │
+│  23     text = text.trim();                                                                                                                                                                                             │
+│  24     text = closeUnclosedCodeBlock(text);                                                                                                                                                                            │
+│  25     const mid = chat.currentEditingMessage.getMID();                                                                                                                                                                │
+│  26                                                                                                                                                                                                                     │
+│  27     const hasFiles = uploadsStore && uploadsStore.get().length > 0;                                                                                                                                                 │
+│  28     if (!text && !mid && !hasFiles) {                                                                                                                                                                               │
+│  29         // Nothing to do                                                                                                                                                                                            │
+│  30         return false;                                                                                                                                                                                               │
+│  31     }                                                                                                                                                                                                               │
+│  32                                                                                                                                                                                                                     │
+│  33     if (text || hasFiles) {                                                                                                                                                                                         │
+│  34         const message = await chat.data.composeMessage(text, {                                                                                                                                                      │
+│  35             sendToChannel: tshow,                                                                                                                                                                                   │
+│  36             quotedMessages: chat.composer?.quotedMessages.get() ?? [],                                                                                                                                              │
+│  37             originalMessage: mid ? await chat.data.findMessageByID(mid) : null,                                                                                                                                     │
+│  38         });                                                                                                                                                                                                         │
+│  39                                                                                                                                                                                                                     │
+│  40         // When editing an encrypted message with files, preserve the original attachments/files                                                                                                                    │
+│  41         // This ensures they're included in the re-encryption process                                                                                                                                               │
+│  42         if (mid) {                                                                                                                                                                                                  │
+│  43             const originalMessage = await chat.data.findMessageByID(mid);                                                                                                                                           │
+│  44                                                                                                                                                                                                                     │
+│  45             if (originalMessage?.t === 'e2e' && originalMessage.attachments && originalMessage.attachments.length > 0) {                                                                                            │
+│  46                 message.attachments = originalMessage.attachments;                                                                                                                                                  │
+│  47                 message.file = originalMessage.file;                                                                                                                                                                │
+│  48             }                                                                                                                                                                                                       │
+│  49         }                                                                                                                                                                                                           │
+│  50                                                                                                                                                                                                                     │
+│  51         try {                                                                                                                                                                                                       │
+│  52             await process(chat, message, previewUrls, isSlashCommandAllowed);                                                                                                                                       │
+│  53             chat.composer?.dismissAllQuotedMessages();                                                                                                                                                              │
+│  54         } catch (error) {                                                                                                                                                                                           │
+│  55             dispatchToastMessage({ type: 'error', message: error });                                                                                                                                                │
+│  56         }                                                                                                                                                                                                           │
+│  57         return true;                                                                                                                                                                                                │
+│  58     }                                                                                                                                                                                                               │
+│  59                                                                                                                                                                                                                     │
+│  60     if (mid) {                                                                                                                                                                                                      │
+│  61         const originalMessage = await chat.data.findMessageByID(mid);                                                                                                                                               │
+│  62                                                                                                                                                                                                                     │
+│  63         if (!originalMessage) {                                                                                                                                                                                     │
+│  64             dispatchToastMessage({ type: 'warning', message: t('Message_not_found') });                                                                                                                             │
+│  65             return false;                                                                                                                                                                                           │
+│  66         }                                                                                                                                                                                                           │
+│  67                                                                                                                                                                                                                     │
+│  68         try {                                                                                                                                                                                                       │
+│  69             if (await chat.flows.processMessageEditing({ ...originalMessage, msg: '' }, previewUrls)) {                                                                                                             │
+│  70                 chat.currentEditingMessage.stop();                                                                                                                                                                  │
+│  71                 return false;                                                                                                                                                                                       │
+│  72             }                                                                                                                                                                                                       │
+│  73                                                                                                                                                                                                                     │
+│  74             await chat.currentEditingMessage.reset();                                                                                                                                                               │
+│  75             await chat.flows.requestMessageDeletion(originalMessage);                                                                                                                                               │
+│  76             return false;                                                                                                                                                                                           │
+│  77         } catch (error) {                                                                                                                                                                                           │
+│  78             dispatchToastMessage({ type: 'error', message: error });                                                                                                                                                │
+│  79         }                                                                                                                                                                                                           │
+│  80     }                                                                                                                                                                                                               │
+│  81                                                                                                                                                                                                                     │
+│  82     return false;                                                                                                                                                                                                   │
+│  83 };                                                                                                                                                                                                                  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll examine the implementation of
+ ⠧ Delete a conversation checkpoint with /resume delete <tag>… (esc to cancel, 8s)
+
+✦ I'll examine the implementation of process within the same file to understand how it handles message processing and whether it invokes any slash commands or other logic.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"filename":"apps/meteor/client/lib/chats/flows/sendMessage.ts","symbolName":"process"}                                                                                   │
+│                                                                                                                                                                                                                         │
+│ File: apps/meteor/client/lib/chats/flows/sendMessage.ts                                                                                                                                                                 │
+│                                                                                                                                                                                                                         │
+│   1 const process = async (chat: ChatAPI, message: IMessage, previewUrls?: string[], isSlashCommandAllowed?: boolean): Promise<void> => {                                                                               │
+│   2     const mid = chat.currentEditingMessage.getMID();                                                                                                                                                                │
+│   3                                                                                                                                                                                                                     │
+│   4     if (await processSetReaction(chat, message)) {                                                                                                                                                                  │
+│   5         return;                                                                                                                                                                                                     │
+│   6     }                                                                                                                                                                                                               │
+│   7                                                                                                                                                                                                                     │
+│   8     if (await processTooLongMessage(chat, message)) {                                                                                                                                                               │
+│   9         return;                                                                                                                                                                                                     │
+│  10     }                                                                                                                                                                                                               │
+│  11                                                                                                                                                                                                                     │
+│  12     if (isSlashCommandAllowed && (await processSlashCommand(chat, message))) {                                                                                                                                      │
+│  13         return;                                                                                                                                                                                                     │
+│  14     }                                                                                                                                                                                                               │
+│  15                                                                                                                                                                                                                     │
+│  16     if (await processMessageUploads(chat, message)) {                                                                                                                                                               │
+│  17         chat.composer?.clear();                                                                                                                                                                                     │
+│  18         return;                                                                                                                                                                                                     │
+│  19     }                                                                                                                                                                                                               │
+│  20                                                                                                                                                                                                                     │
+│  21     message = (await onClientBeforeSendMessage({ ...message, isEditing: !!mid })) as IMessage & { isEditing?: boolean };                                                                                            │
+│  22                                                                                                                                                                                                                     │
+│  23     // e2e should be a client property only                                                                                                                                                                         │
+│  24     delete message.e2e;                                                                                                                                                                                             │
+│  25     delete (message as IMessage & { isEditing?: boolean }).isEditing;                                                                                                                                               │
+│  26                                                                                                                                                                                                                     │
+│  27     if (await processMessageEditing(chat, message, previewUrls)) {                                                                                                                                                  │
+│  28         return;                                                                                                                                                                                                     │
+│  29     }                                                                                                                                                                                                               │
+│  30                                                                                                                                                                                                                     │
+│  31     chat.composer?.clear();                                                                                                                                                                                         │
+│  32     await sdk.call('sendMessage', message, previewUrls);                                                                                                                                                            │
+│  33                                                                                                                                                                                                                     │
+│  34     // after the request is complete we can go ahead and mark as sent                                                                                                                                               │
+│  35     Messages.state.update(                                                                                                                                                                                          │
+│  36         (record) => record._id === message._id && record.temp === true,                                                                                                                                             │
+│  37         ({ temp: _, ...record }) => record,                                                                                                                                                                         │
+│  38     );                                                                                                                                                                                                              │
+│  39 };                                                                                                                                                                                                                  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll examine apps/meteor/app/lib/client/methods/sendMessage.ts to see if it contains the Meteor method definition for sending messages and how it integrates with the client-side flow.
+
+✦ I will use mcp_rocket-ast-analyzer_implement to read the contents of `apps/meteor/
+ ⠴ Delete a conversation checkpoint with /resume delete <tag>… (esc to cancel, 12s)
+
+✦ I will use mcp_rocket-ast-analyzer_implement to read the contents of apps/meteor/app/lib/client/methods/sendMessage.ts and understand its implementation of the message-sending Meteor method.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"filename":"apps/meteor/app/lib/client/methods/sendMessage.ts","symbolName":"sendMessage"}                                                                               │
+│                                                                                                                                                                                                                         │
+│ ...t.chat/core-services';                                                                                                                                                                                               │
+│ import { Authorization, ServiceClassInternal } from '@rocket.chat/core-services';                                                                                                                                       │
+│ import { isEditedMessage } from '@rocket.chat/core-typings';                                                                                                                                                            │
+│ import type { MessageUrl, IMessage, MessageTypesValues, IUser, IRoom, AtLeast } from '@rocket.chat/core-typings';                                                                                                       │
+│ import { Messages, Rooms } from '@rocket.chat/models';                                                                                                                                                                  │
+│                                                                                                                                                                                                                         │
+│ import { OEmbed } from './hooks/AfterSaveOEmbed';                                                                                                                                                                       │
+│ import { deleteMessage } from '../../../app/lib/server/functions/deleteMessage';                                                                                                                                        │
+│ import { parseUrlsInMessage } from '../../../app/lib/server/functions/parseUrlsInMessage';                                                                                                                              │
+│ import { sendMessage } from '../../../app/lib/server/functions/sendMessage';                                                                                                                                            │
+│ import { updateMessage } from '../../../app/lib/server/functions/updateMessage';                                                                                                                                        │
+│ import { notifyOnRoomChangedById, notifyOnMessageChange } from '../../../app/lib/server/lib/notifyListener';                                                                                                            │
+│ import { notifyUsersOnSystemMessage } from '../../../app/lib/server/lib/notifyUsersOnMessage';                                                                                                                          │
+│ import { executeSendMessage } from '../../../app/lib/server/methods/sendMessage';                                                                                                                                       │
+│ import { executeSetReaction } from '../../../app/reactions/server/setReaction';                                                                                                                                         │
+│ import { settings } from '../../../app/settings/server';                                                                                                                                                                │
+│ import { getUserAvatarURL } from '../../../app/utils/server/getUserAvatarURL';                                                                                                                                          │
+│ import { BeforeSaveCannedResponse } from '../../../ee/server/hooks/messages/BeforeSaveCannedResponse';                                                                                                                  │
+│ import { FederationMatrixInvalidConfigurationError } from '../federation/utils';                                                                                                                                        │
+│ import { FederationActions } from './hooks/BeforeFederationActions';                                                                                                                                                    │
+│ import { BeforeSaveBadWords } from './hooks/BeforeSaveBadWords';                                                                                                                                                        │
+│ import { BeforeSaveCheckMAC } from './hooks/BeforeSaveCheckMAC';                                                                                                                                                        │
+│ import { BeforeSaveJumpToMessage } from './hooks/BeforeSaveJumpToMessage';                                                                                                                                              │
+│ import { BeforeSaveMarkdownParser } from './hooks/BeforeSaveMarkdownParser';                                                                                                                                            │
+│ import { mentionServer } from './hooks/BeforeSaveMentions';                                                                                                                                                             │
+│ import { BeforeSavePreventMention } from './hooks/BeforeSavePreventMention';                                                                                                                                            │
+│ import { BeforeSaveSpotify } from './hooks/BeforeSaveSpotify';                                                                                                                                                          │
+│ import { closeUnclosedCodeBlock } from '../../../lib/utils/closeUnclosedCodeBlock';                                                                                                                                     │
+│ import { shouldBreakInVersion } from '../../lib/shouldBreakInVersion';                                                                                                                                                  │
+│                                                                                                                                                                                                                         │
+│ const disableMarkdownParser = ['yes', 'true'].includes(String(process.env.DISABLE_MESSAGE_PARSER).toLowerCase());                                                                                                       │
+│                                                                                                                                                                                                                         │
+│ export class MessageService extends ServiceClassInternal implements IMessageService {                                                                                                                                   │
+│     protected name = 'message';                                                                                                                                                                                         │
+│                                                                                                                                                                                                                         │
+│     private preventMention: BeforeSavePreventMention;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private badWords: BeforeSaveBadWords;                                                                                                                                                                               │
+│                                                                                                                                                                                                                         │
+│     private spotify: BeforeSaveSpotify;                                                                                                                                                                                 │
+│                                                                                                                                                                                                                         │
+│     private jumpToMessage: BeforeSaveJumpToMessage;                                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│     private cannedResponse: BeforeSaveCannedResponse;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private markdownParser: BeforeSaveMarkdownParser;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private checkMAC: BeforeSaveCheckMAC;                                                                                                                                                                               │
+│                                                                                                                                                                                                                         │
+│     override async created() {                                                                                                                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private async configureBadWords() {                                                                                                                                                                                 │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async sendMessage({ fromId, rid, msg }: { fromId: string; rid: string; msg: string }): Promise<IMessage> {                                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async saveMessageFromFederation({                                                                                                                                                                                   │
+│         fromId,                                                                                                                                                                                                         │
+│         rid,                                                                                                                                                                                                            │
+│         federation_event_id,                                                                                                                                                                                            │
+│         msg,                                                                                                                                                                                                            │
+│         e2e_content,                                                                                                                                                                                                    │
+│         file,                                                                                                                                                                                                           │
+│         files,                                                                                                                                                                                                          │
+│         attachments,                                                                                                                                                                                                    │
+│         thread,                                                                                                                                                                                                         │
+│         ts,                                                                                                                                                                                                             │
+│     }: {                                                                                                                                                                                                                │
+│         fromId: string;                                                                                                                                                                                                 │
+│         rid: string;                                                                                                                                                                                                    │
+│         federation_event_id: string;                                                                                                                                                                                    │
+│         msg?: string;                                                                                                                                                                                                   │
+│         e2e_content?: {                                                                                                                                                                                                 │
+│             algorithm: 'm.megolm.v1.aes-sha2';                                                                                                                                                                          │
+│             ciphertext: string;                                                                                                                                                                                         │
+│         };                                                                                                                                                                                                              │
+│         file?: IMessage['file'];                                                                                                                                                                                        │
+│         files?: IMessage['files'];                                                                                                                                                                                      │
+│         attachments?: IMessage['attachments'];                                                                                                                                                                          │
+│         thread?: { tmid: string; tshow: boolean };                                                                                                                                                                      │
+│         ts: Date;                                                                                                                                                                                                       │
+│     }): Promise<IMessage> {                                                                                                                                                                                             │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async sendMessageWithValidation(user: IUser, message: Partial<IMessage>, room: Partial<IRoom>, upsert = false): Promise<IMessage> {                                                                                 │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async deleteMessage(user: IUser, message: IMessage): Promise<void> {                                                                                                                                                │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async updateMessage(message: IMessage, user: IUser, originalMsg?: IMessage, previewUrls?: string[]): Promise<void> {                                                                                                │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async reactToMessage(userId: string, reaction: string, messageId: IMessage['_id'], shouldReact?: boolean): Promise<void> {                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+
+│                                                                                                                                                                                                                         │
+│     async saveSystemMessageAndNotifyUser<T = IMessage>(                                                                                                                                                                 │
+│ Output too long and was saved to: /Users/echoooooo/.gemini/tmp/gsoc-rocket-chat/tool-outputs/session-464cf724-af6e-4afe-a944-9c061affc948/mcp_rocket-ast-analyzer_implement_pit9qyqe.txt                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I will examine
+ ⠧ Change your authentication method (/settings)… (esc to cancel, 16s)
+
+✦ I will examine apps/meteor/app/lib/client/methods/sendMessage.ts to see if there's a legacy client-side method definition and how it contributes to the overall message-sending process.
+
+✦ I will use grep_search to locate the
+ ⠧ Change your authentication method (/settings)… (esc to cancel, 20s)
+
+✦ I will use grep_search to locate the definitions of Meteor.methods or Meteor.call('sendMessage' on the client side, which will help me understand how the message-sending functionality is registered and invoked.
+
+✦ I will use run_shell_command with
+ ⠼ Change your authentication method (/settings)… (esc to cancel, 24s)
+
+✦ I will use run_shell_command with cat to read the content of `apps/meteor/app/lib/client/methods/sendMessage.ts
+ ⠦ Change your authentication method (/settings)… (esc to cancel, 24s)
+
+✦ I will use run_shell_command with cat to read the content of apps/meteor/app/lib/client/methods/sendMessage.ts and examine its implementation directly.
+
+✦ I will use mcp_rocket-ast-analyzer_search to find symbols in `apps/meteor/app/lib
+ ⠸ Control when chat history gets compressed based on context compression threshold (settings.json)… (esc to cancel, 5s)
+
+✦ I will use mcp_rocket-ast-analyzer_search to find symbols in apps/meteor/app/lib/client/methods/sendMessage.ts, which will then allow me to use mcp_rocket-ast-analyzer_implement on a specific symbol.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"apps/meteor/app/lib/client/methods/sendMessage.ts"}                                                                                                                │
+│                                                                                                                                                                                                                         │
+│ ⚠️ Architecture Note (Flow 1 — Client Message Sending):                                                                                                                                                                 │
+│ Entry point is RoomBody, NOT sendMessage. Traversing graph up from sendMessage will surface server/federation noise.                                                                                                    │
+│ Chain: RoomBody → ComposerContainer → ComposerMessage → MessageBox → sendMessage → sdk.call('sendMessage')                                                                                                              │
+│ Use implement on each component in order. graph(sendMessage, up, client) works but start from RoomBody if possible.                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ ---                                                                                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ 📁 Files:                                                                                                                                                                                                               │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/lib/client/methods/sendMessage.ts                                                                                                            │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I will check `apps/meteor/app/utils/client/
+ ⠇ Control when chat history gets compressed based on context compression threshold (settings.json)… (esc to cancel, 12s)
+
+✦ I will check apps/meteor/app/utils/client/lib/SDKClient.ts to see how sdk.call is implemented and how it relates to Meteor's method call system.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"symbolName":"sdk","filename":"apps/meteor/app/utils/client/lib/SDKClient.ts"}                                                                                           │
+│                                                                                                                                                                                                                         │
+│ Symbol "sdk" not found in "apps/meteor/app/utils/client/lib/SDKClient.ts".                                                                                                                                              │
+│ It exists in:                                                                                                                                                                                                           │
+│  1. /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/ee/packages/federation-matrix/tests/helper/ddp-listener.ts                                                                                               │
+│ Retry with the correct filename.                                                                                                                                                                                        │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I will search for "sdk" to find where it's defined and how it's used
+ ⠴ Delete the character to the right with Ctrl+D or Delete… (esc to cancel, 15s)
+
+✦ I will search for "sdk" to find where it's defined and how it's used, which will clarify its role in the message-sending process.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"SDKClient.ts"}                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ 📁 Files:                                                                                                                                                                                                               │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/utils/client/lib/SDKClient.ts                                                                                                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I
+ ⠸ Define a custom command for calling discovered tools (settings.json)… (esc to cancel, 1m 12s)
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find symbols in `apps/meteor/app/utils
+ ⠼ Delete the character to the right with Ctrl+D or Delete… (esc to cancel, 27s)
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find symbols in apps/meteor/app/utils/client/lib/SDKClient.ts, then use mcp_rocket-ast-analyzer_implement on a specific symbol to see how sdk.call is handled.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"SDKClient"}                                                                                                                                                        │
+│                                                                                                                                                                                                                         │
+│ 📁 Files:                                                                                                                                                                                                               │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/utils/client/lib/SDKClient.ts                                                                                                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use mcp_rocket-ast-analyzer_graph on sdk to find its origin and see how
+ ⠧ Delete the character to the right with Ctrl+D or Delete… (esc to cancel, 24s)
+
+✦ I'll use mcp_rocket-ast-analyzer_graph on sdk to find its origin and see how it's used in the message-sending process.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  graph (rocket-ast-analyzer MCP Server) {"direction":"down","query":"sdk"}                                                                                                                                            │
+│                                                                                                                                                                                                                         │
+│ Call Graph ↓ downstream of sdk (depth=4)                                                                                                                                                                                │
+│                                                                                                                                                                                                                         │
+│ 📍 sdk · ee/packages/federation-matrix/tests/helper/ddp-listener.ts                                                                                                                                                     │
+│   → DDPSDK [type] · DDPSDK.ts                                                                                                                                                                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use
+ ⠏ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 51s)
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"apps/meteor/app/utils/client/lib/SDKClient.ts"}                                                                                                                    │
+│                                                                                                                                                                                                                         │
+│ 📁 Files:                                                                                                                                                                                                               │
+│ /Users/echoooooo/Desktop/code/gsoc-rocket-chat/Rocket.Chat/apps/meteor/app/utils/client/lib/SDKClient.ts                                                                                                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll search for call to see how it's used in the codebase and if it provides
+ ⠇ Enable checkpointing to recover your session after a crash (settings.json)… (esc to cancel, 32s)
+
+✦ I'll search for call to see how it's used in the codebase and if it provides any clues about how sdk.call is handled.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"sdk.call"}                                                                                                                                                         │
+│                                                                                                                                                                                                                         │
+│ 🔍 Text matches for "sdk.call" (25 files):                                                                                                                                                                              │
+│   apps/meteor/app/slashcommand-asciiarts/client/lenny.ts (1 match)                                                                                                                                                      │
+│     → await sdk.call('sendMessage', { ...msg, msg: ${params} ( ͡° ͜ʖ ͡°) });                                                                                                                                               │
+│   apps/meteor/app/slashcommand-asciiarts/client/tableflip.ts (1 match)                                                                                                                                                  │
+│     → await sdk.call('sendMessage', { ...msg, msg: ${params} (╯°□°）╯︵ ┻━┻ });                                                                                                                                         │
+│   apps/meteor/app/slashcommand-asciiarts/client/gimme.ts (1 match)                                                                                                                                                      │
+│     → await sdk.call('sendMessage', { ...msg, msg: ༼ つ ◕_◕ ༽つ ${params} });                                                                                                                                           │
+│   apps/meteor/app/slashcommand-asciiarts/client/unflip.ts (1 match)                                                                                                                                                     │
+│     → await sdk.call('sendMessage', { ...msg, msg: ${params} ┬─┬ ノ( ゜-゜ノ) });                                                                                                                                       │
+│   apps/meteor/app/slashcommand-asciiarts/client/shrug.ts (1 match)                                                                                                                                                      │
+│     → await sdk.call('sendMessage', { ...msg, msg: ${params} ¯\\\\_(ツ)_/¯ });                                                                                                                                          │
+│   apps/meteor/app/slashcommands-open/client/client.ts (1 match)                                                                                                                                                         │
+│     → await sdk.call('createDirectMessage', room);                                                                                                                                                                      │
+│   apps/meteor/app/slashcommands-status/client/status.ts (1 match)                                                                                                                                                       │
+│     → await sdk.call('setUserStatus', undefined, params);                                                                                                                                                               │
+│   apps/meteor/app/slashcommands-topic/client/topic.ts (1 match)                                                                                                                                                         │
+│     → await sdk.call('saveRoomSettings', message.rid, 'roomTopic', params);                                                                                                                                             │
+│   apps/meteor/app/autotranslate/client/lib/autotranslate.ts (2 matches)                                                                                                                                                 │
+│     → sdk.call('autoTranslate.getProviderUiMetadata'),                                                                                                                                                                  │
+│   apps/meteor/client/meteor/startup/accounts.ts (1 match)                                                                                                                                                               │
+│     → void sdk.call('afterVerifyEmail');                                                                                                                                                                                │
+│   apps/meteor/client/providers/UserProvider/UserProvider.tsx (1 match)                                                                                                                                                  │
+│     → await sdk.call('logoutCleanUp', user);                                                                                                                                                                            │
+│   apps/meteor/client/providers/CustomSoundProvider/CustomSoundProvider.tsx (1 match)                                                                                                                                    │
+│     → const customSoundsList = await sdk.call('listCustomSounds');                                                                                                                                                      │
+│   apps/meteor/client/hooks/notification/useNotification.ts (1 match)                                                                                                                                                    │
+│     → void sdk.call('sendMessage', {                                                                                                                                                                                    │
+│   apps/meteor/client/hooks/useJoinRoom.ts (1 match)                                                                                                                                                                     │
+│     → await sdk.call('joinRoom', rid);                                                                                                                                                                                  │
+│   apps/meteor/client/lib/cachedStores/CachedStore.ts (2 matches)                                                                                                                                                        │
+│     → const data = await sdk.call(${this.name}/get);                                                                                                                                                                    │
+│   apps/meteor/client/lib/e2ee/rocketchat.e2e.room.ts (2 matches)                                                                                                                                                        │
+│     → await sdk.call('e2e.setRoomKeyID', this.roomId, this.keyID);                                                                                                                                                      │
+│   apps/meteor/client/lib/e2ee/rocketchat.e2e.ts (1 match)                                                                                                                                                               │
+│     → await sdk.call('e2e.requestSubscriptionKeys');                                                                                                                                                                    │
+│   apps/meteor/client/lib/utils/callWithErrorHandling.ts (1 match)                                                                                                                                                       │
+│     → return await sdk.call(method, ...params);                                                                                                                                                                         │
+│   apps/meteor/client/lib/fetchFeatures.ts (1 match)                                                                                                                                                                     │
+│     → export const fetchFeatures = (): Promise<string[]> => whenLoggedIn().then(() => sdk.call('license:getModules'));                                                                                                  │
+│   apps/meteor/client/lib/chats/data.ts (2 matches)                                                                                                                                                                      │
+│     → Messages.state.find((record) => record._id === mid && record._hidden !== true) ?? sdk.call('getSingleMessage', mid);                                                                                              │
+│   apps/meteor/client/lib/chats/flows/processSlashCommand.ts (1 match)                                                                                                                                                   │
+│     → const result = await sdk.call('slashCommand', { cmd: commandName, params, msg: message, triggerId });                                                                                                             │
+│   apps/meteor/client/lib/chats/flows/sendMessage.ts (1 match)                                                                                                                                                           │
+│     → await sdk.call('sendMessage', message, previewUrls);                                                                                                                                                              │
+│   apps/meteor/client/lib/userStatuses.ts (1 match)                                                                                                                                                                      │
+│     → const result = await sdk.call('listCustomUserStatus');                                                                                                                                                            │
+│   apps/meteor/client/startup/startup.ts (1 match)                                                                                                                                                                       │
+│     → sdk.call('userSetUtcOffset', utcOffset);                                                                                                                                                                          │
+│   apps/meteor/client/views/root/hooks/useIframeCommands.ts (1 match)                                                                                                                                                    │
+│     → sdk.call('logoutCleanUp', user as unknown as IUser);                                                                                                                                                              │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use `mcp_rocket-ast-analyzer_search
+ ⠏ Enable checkpointing to recover your session after a crash (settings.json)… (esc to cancel, 35s)
+
+✦ I'll use mcp_rocket-ast-analyzer_search with the pattern export const sdk to find its definition and how it's used in the message-sending process.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"export const sdk"}                                                                                                                                                 │
+│                                                                                                                                                                                                                         │
+│ 🔍 Text matches for "export const sdk" (1 files):                                                                                                                                                                       │
+│   apps/meteor/app/utils/client/lib/SDKClient.ts (1 match)                                                                                                                                                               │
+│     → export const sdk = createSDK(APIClient);                                                                                                                                                                          │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll check createSDK in the same file to see how it's used and how it relates to the message-sending process.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"filename":"apps/meteor/app/utils/client/lib/SDKClient.ts","symbolName":"createSDK"}                                                                                     │
+│                                                                                                                                                                                                                         │
+│ File: apps/meteor/app/utils/client/lib/SDKClient.ts                                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│   1 export const createSDK = (rest: RestClientInterface) => {                                                                                                                                                           │
+│   2     const { stream, stopAll } = createStreamManager();                                                                                                                                                              │
+│   3                                                                                                                                                                                                                     │
+│   4     const publish = (name: string, args: unknown[]) => {                                                                                                                                                            │
+│   5         Meteor.call(`stream-${name}`, ...args);                                                                                                                                                                     │
+│   6     };                                                                                                                                                                                                              │
+│   7                                                                                                                                                                                                                     │
+│   8     const call = <T extends keyof ServerMethods>(method: T, ...args: Parameters<ServerMethods[T]>): Promise<ReturnType<ServerMethods[T]>> => {                                                                      │
+│   9         return Meteor.callAsync(method, ...args);                                                                                                                                                                   │
+│  10     };                                                                                                                                                                                                              │
+│  11                                                                                                                                                                                                                     │
+│  12     const disconnect = () => {                                                                                                                                                                                      │
+│  13         Meteor.disconnect();                                                                                                                                                                                        │
+│  14     };                                                                                                                                                                                                              │
+│  15                                                                                                                                                                                                                     │
+│  16     const reconnect = () => {                                                                                                                                                                                       │
+│  17         Meteor.reconnect();                                                                                                                                                                                         │
+│  18     };                                                                                                                                                                                                              │
+│  19                                                                                                                                                                                                                     │
+│  20     return {                                                                                                                                                                                                        │
+│  21         rest,                                                                                                                                                                                                       │
+│  22         stop: stopAll,                                                                                                                                                                                              │
+│  23         stream,                                                                                                                                                                                                     │
+│  24         publish,                                                                                                                                                                                                    │
+│  25         call,                                                                                                                                                                                                       │
+│  26         disconnect,                                                                                                                                                                                                 │
+│  27         reconnect,                                                                                                                                                                                                  │
+│  28     };                                                                                                                                                                                                              │
+│  29 };                                                                                                                                                                                                                  │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use mcp_rocket-ast-analyzer_implement to find Meteor.methods in apps/meteor/app/lib/client/methods/sendMessage.ts to see if there are any client-side stubs for the sendMessage method.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"Meteor.methods({ sendMessage"}                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│ No results for "Meteor.methods({ sendMessage". Try a different keyword.                                                                                                                                                 │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll search for Meteor.methods in `apps/meteor/app/
+ ⠙ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 45s)
+
+✦ I'll search for Meteor.methods in apps/meteor/app/lib/client/methods/sendMessage.ts without the sendMessage part to see if there are any client-side stubs for other methods and how they relate to the message-sending
+  process.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"Meteor.methods"}                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│ 🔍 Text matches for "Meteor.methods" (170 files):                                                                                                                                                                       │
+│   apps/meteor/app/statistics/server/methods/getStatistics.ts (1 match)                                                                                                                                                  │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/uploadImportFile.ts (1 match)                                                                                                                                                 │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/startImport.ts (1 match)                                                                                                                                                      │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/getLatestImportOperations.ts (1 match)                                                                                                                                        │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/downloadPublicImportFile.ts (1 match)                                                                                                                                         │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/getImportFileData.ts (1 match)                                                                                                                                                │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/importer/server/methods/getImportProgress.ts (1 match)                                                                                                                                                │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/meteor-accounts-saml/server/methods/samlLogout.ts (1 match)                                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/meteor-accounts-saml/server/methods/addSamlService.ts (1 match)                                                                                                                                       │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/user-status/server/methods/getUserStatusText.ts (1 match)                                                                                                                                             │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/user-status/server/methods/listCustomUserStatus.ts (1 match)                                                                                                                                          │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/user-status/server/methods/insertOrUpdateUserStatus.ts (1 match)                                                                                                                                      │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/user-status/server/methods/setUserStatus.ts (1 match)                                                                                                                                                 │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/user-status/server/methods/deleteCustomUserStatus.ts (1 match)                                                                                                                                        │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/slackbridge/server/removeChannelLinks.ts (1 match)                                                                                                                                                    │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/irc/server/methods/resetIrcConnection.ts (1 match)                                                                                                                                                    │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/message-mark-as-unread/server/unreadMessages.ts (1 match)                                                                                                                                             │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/reactions/client/methods/setReaction.ts (1 match)                                                                                                                                                     │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/iframe-login/server/iframe_server.ts (1 match)                                                                                                                                                        │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/message-pin/server/pinMessage.ts (1 match)                                                                                                                                                            │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/mentions/server/methods/getUserMentionsByChannel.ts (1 match)                                                                                                                                         │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/utils/server/slashCommand.ts (1 match)                                                                                                                                                                │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/oauth2-server-config/server/admin/methods/deleteOAuthApp.ts (1 match)                                                                                                                                 │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/oauth2-server-config/server/admin/methods/updateOAuthApp.ts (1 match)                                                                                                                                 │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/search/server/methods.ts (1 match)                                                                                                                                                                    │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/crowd/server/methods.ts (1 match)                                                                                                                                                                     │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/outgoing/addOutgoingIntegration.ts (1 match)                                                                                                                              │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/outgoing/deleteOutgoingIntegration.ts (1 match)                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/outgoing/replayOutgoingIntegration.ts (1 match)                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/outgoing/updateOutgoingIntegration.ts (1 match)                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/clearIntegrationHistory.ts (1 match)                                                                                                                                      │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/incoming/updateIncomingIntegration.ts (1 match)                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/incoming/deleteIncomingIntegration.ts (1 match)                                                                                                                           │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/integrations/server/methods/incoming/addIncomingIntegration.ts (1 match)                                                                                                                              │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/push/server/methods.ts (1 match)                                                                                                                                                                      │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/emoji-custom/server/methods/deleteEmojiCustom.ts (1 match)                                                                                                                                            │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/emoji-custom/server/methods/uploadEmojiCustom.ts (1 match)                                                                                                                                            │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/emoji-custom/server/methods/insertOrUpdateEmoji.ts (1 match)                                                                                                                                          │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/livechat/server/methods/sendMessageLivechat.ts (1 match)                                                                                                                                              │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/2fa/server/methods/enable.ts (1 match)                                                                                                                                                                │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/2fa/server/methods/disable.ts (1 match)                                                                                                                                                               │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/2fa/server/methods/validateTempToken.ts (1 match)                                                                                                                                                     │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/2fa/server/methods/checkCodesRemaining.ts (1 match)                                                                                                                                                   │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/2fa/server/methods/regenerateCodes.ts (1 match)                                                                                                                                                       │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/push-notifications/server/methods/saveNotificationSettings.ts (1 match)                                                                                                                               │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/threads/server/methods/followMessage.ts (1 match)                                                                                                                                                     │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/threads/server/methods/getThreadsList.ts (1 match)                                                                                                                                                    │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/threads/server/methods/unfollowMessage.ts (1 match)                                                                                                                                                   │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/threads/server/methods/getThreadMessages.ts (1 match)                                                                                                                                                 │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/file-upload/server/methods/sendFileMessage.ts (1 match)                                                                                                                                               │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/file-upload/server/methods/getS3FileUrl.ts (1 match)                                                                                                                                                  │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/cloud/server/methods.ts (1 match)                                                                                                                                                                     │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+│   apps/meteor/app/lib/server/methods/executeSlashCommandPreview.ts (1 match)                                                                                                                                            │
+│     → Meteor.methods<ServerMethods>({                                                                                                                                                                                   │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll try to read `apps/meteor
+ ⠼ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 48s)
+
+✦ I'll try to read apps/meteor/app/lib/client/methods/sendMessage.ts again to find the Meteor.methods definition.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"filename":"apps/meteor/app/lib/client/methods/sendMessage.ts","symbolName":"Meteor.methods"}                                                                            │
+│                                                                                                                                                                                                                         │
+│ Symbol "Meteor.methods" not found. Use search to confirm the name.                                                                                                                                                      │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use mcp_rocket-ast-analyzer_graph on sendMessage in `apps/meteor/app/lib
+ ⠙ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 51s)
+
+✦ I'll use mcp_rocket-ast-analyzer_graph on sendMessage in apps/meteor/app/lib/client/methods/sendMessage.ts to understand its dependencies and how it's called.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  graph (rocket-ast-analyzer MCP Server) {"query":"sendMessage","direction":"down"}                                                                                                                                    │
+│                                                                                                                                                                                                                         │
+│ Call Graph ↓ downstream of sendMessage (depth=4)                                                                                                                                                                        │
+│                                                                                                                                                                                                                         │
+│ 📍 sendMessage · packages/ddp-client/src/livechat/LivechatClientImpl.ts                                                                                                                                                 │
+│   → fetch · TestSourceStorage.ts                                                                                                                                                                                        │
+│     → fetch · TestSourceStorage.ts                                                                                                                                                                                      │
+│       → fetch ↩                                                                                                                                                                                                         │
+│       → push · ModalStore.ts                                                                                                                                                                                            │
+│         → filter · useTonePlayer.ts                                                                                                                                                                                     │
+│         → push · ModalStore.ts                                                                                                                                                                                          │
+│         → ReactNode [type]                                                                                                                                                                                              │
+│         → update · ModalStore.ts                                                                                                                                                                                        │
+│         → ModalInstance [type] · ModalStore.ts                                                                                                                                                                          │
+│         → mapCurrentModal · imperativeModal.tsx                                                                                                                                                                         │
+│         … +8 more                                                                                                                                                                                                       │
+│       → from                                                                                                                                                                                                            │
+│       → forEach · OrderedDict.ts                                                                                                                                                                                        │
+│         → forEach · OrderedDict.ts                                                                                                                                                                                      │
+│         → call · MinimalDDPClient.ts                                                                                                                                                                                    │
+│         → TValue [type]                                                                                                                                                                                                 │
+│         → TKey [type]                                                                                                                                                                                                   │
+│         → TOptions [type]                                                                                                                                                                                               │
+│         → TContext [type]                                                                                                                                                                                               │
+│         … +7 more                                                                                                                                                                                                       │
+│       → startsWith                                                                                                                                                                                                      │
+│       → concat                                                                                                                                                                                                          │
+│       … +11 more                                                                                                                                                                                                        │
+│     → push ↩                                                                                                                                                                                                            │
+│     → from ↩                                                                                                                                                                                                            │
+│     → forEach ↩                                                                                                                                                                                                         │
+│     → startsWith ↩                                                                                                                                                                                                      │
+│     → concat ↩                                                                                                                                                                                                          │
+│     … +11 more                                                                                                                                                                                                          │
+│   → stringify                                                                                                                                                                                                           │
+│   → json · ApiEndpoint.ts                                                                                                                                                                                               │
+│     → parse · index.ts                                                                                                                                                                                                  │
+│       → match · page.ts                                                                                                                                                                                                 │
+│         → slice                                                                                                                                                                                                         │
+│         → exec                                                                                                                                                                                                          │
+│         → decodeURIComponent                                                                                                                                                                                            │
+│         → call · MinimalDDPClient.ts                                                                                                                                                                                    │
+│         → indexOf · OrderedDict.ts                                                                                                                                                                                      │
+│         → decodeURLEncodedURIComponent · page.ts                                                                                                                                                                        │
+│       → push · ModalStore.ts                                                                                                                                                                                            │
+│         → filter ↩                                                                                                                                                                                                      │
+│         → push ↩                                                                                                                                                                                                        │
+│         → ReactNode [type] ↩                                                                                                                                                                                            │
+│         → update ↩                                                                                                                                                                                                      │
+│         → ModalInstance [type] ↩                                                                                                                                                                                        │
+│         → mapCurrentModal ↩                                                                                                                                                                                             │
+│         … +8 more                                                                                                                                                                                                       │
+│       → error · MediaCallLogger.ts                                                                                                                                                                                      │
+│         → log · MediaCallLogger.ts                                                                                                                                                                                      │
+│         → error · MediaCallLogger.ts                                                                                                                                                                                    │
+│         → get · StepsLinkedList.ts                                                                                                                                                                                      │
+│         → set · updater.ts                                                                                                                                                                                              │
+│         → reject [→event] · Call.ts                                                                                                                                                                                     │
+│         → PasswordPolicyError [new] · PasswordPolicyError.ts                                                                                                                                                            │
+│         … +10 more                                                                                                                                                                                                      │
+│       → join · service.ts                                                                                                                                                                                               │
+│         → error · MediaCallLogger.ts                                                                                                                                                                                    │
+│         → catch                                                                                                                                                                                                         │
+│         → IUser [type] · IUser.ts                                                                                                                                                                                       │
+│         → IRoom [type] · IRoom.ts                                                                                                                                                                                       │
+│         → VideoConference [type] · IVideoConference.ts                                                                                                                                                                  │
+│         → findOneById · Users.ts                                                                                                                                                                                        │
+│         … +17 more                                                                                                                                                                                                      │
+│       → map · Cursor.ts                                                                                                                                                                                                 │
+│         → push · ModalStore.ts                                                                                                                                                                                          │
+│         → forEach · OrderedDict.ts                                                                                                                                                                                      │
+│         → call · MinimalDDPClient.ts                                                                                                                                                                                    │
+│         → TOptions [type]                                                                                                                                                                                               │
+│         → DispatchTransform [type] · Cursor.ts                                                                                                                                                                          │
+│         → TIterationCallback [type]                                                                                                                                                                                     │
+│       → trim · stringUtils.ts                                                                                                                                                                                           │
+│         → replace · page.ts                                                                                                                                                                                             │
+│         → RegExp [new]                                                                                                                                                                                                  │
+│         → call · MinimalDDPClient.ts                                                                                                                                                                                    │
+│         → makeString · stringUtils.ts                                                                                                                                                                                   │
+│         → defaultToWhiteSpace · stringUtils.ts                                                                                                                                                                          │
+│       … +31 more                                                                                                                                                                                                        │
+│     → IApiResponse [type] · IResponse.ts                                                                                                                                                                                │
+│     → IApiResponseJSON [type] · IResponse.ts                                                                                                                                                                            │
+│   → now · Agenda.ts                                                                                                                                                                                                     │
+│     → Date [new]                                                                                                                                                                                                        │
+│     → debug · MediaCallLogger.ts                                                                                                                                                                                        │
+│       → get · StepsLinkedList.ts                                                                                                                                                                                        │
+│         → json · ApiEndpoint.ts                                                                                                                                                                                         │
+│         → filter · useTonePlayer.ts                                                                                                                                                                                     │
+│         → push · ModalStore.ts                                                                                                                                                                                          │
+│         → includes                                                                                                                                                                                                      │
+│         → error [→event] · MediaCallLogger.ts                                                                                                                                                                           │
+│         → has · index.ts                                                                                                                                                                                                │
+│         … +76 more                                                                                                                                                                                                      │
+│       → debug · MediaCallLogger.ts                                                                                                                                                                                      │
+│         → get ↩                                                                                                                                                                                                         │
+│         → debug ↩                                                                                                                                                                                                       │
+│         → addEntry · AppConsole.ts                                                                                                                                                                                      │
+│         → getFunc · AppConsole.ts                                                                                                                                                                                       │
+│         → getStack · logger.ts                                                                                                                                                                                          │
+│         → writeLog · ClientLogger.ts                                                                                                                                                                                    │
+│       → addEntry ↩                                                                                                                                                                                                      │
+│       → getFunc ↩                                                                                                                                                                                                       │
+│       → getStack ↩                                                                                                                                                                                                      │
+│       → writeLog ↩                                                                                                                                                                                                      │
+│     → create · Callbacks.ts                                                                                                                                                                                             │
+│       → filter · useTonePlayer.ts                                                                                                                                                                                       │
+│         → BiquadFilterNode [type]                                                                                                                                                                                       │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll use `mcp_rocket
+ ⠙ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 55s)
+
+✦ I'll use mcp_rocket-ast-analyzer_implement to find the sendMessage symbol in `apps/meteor/app/lib/client/
+ ⠸ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 55s)
+
+✦ I'll use mcp_rocket-ast-analyzer_implement to find the sendMessage symbol in apps/meteor/app/lib/client/methods/sendMessage.ts and examine its implementation.
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find the sendMessage symbol in `apps/meteor/app/lib/client/methods/
+ ⠧ Reload instructional context from GEMINI.md files with /memory reload… (esc to cancel, 59s)
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find the sendMessage symbol in apps/meteor/app/lib/client/methods/sendMessage.ts and examine its implementation.
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find where Meteor.methods is
+ ⠼ Define a custom command for calling discovered tools (settings.json)… (esc to cancel, 1m 12s)
+
+✦ I'll use mcp_rocket-ast-analyzer_search to find where Meteor.methods is used in apps/meteor/app/lib/client/methods/sendMessage.ts and examine its implementation.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  search (rocket-ast-analyzer MCP Server) {"query":"apps/meteor/app/lib/client/methods/sendMessage.ts Meteor.methods"}                                                                                                 │
+│                                                                                                                                                                                                                         │
+│ No results for "apps/meteor/app/lib/client/methods/sendMessage.ts Meteor.methods". Try a different keyword.                                                                                                             │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ I'll check apps/meteor/app/lib/server/methods/sendMessage.ts to see what happens on the server when a message is sent.
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  implement (rocket-ast-analyzer MCP Server) {"symbolName":"sendMessage","filename":"apps/meteor/app/lib/server/methods/sendMessage.ts"}                                                                               │
+│                                                                                                                                                                                                                         │
+│ ...t.chat/core-services';                                                                                                                                                                                               │
+│ import { Authorization, ServiceClassInternal } from '@rocket.chat/core-services';                                                                                                                                       │
+│ import { isEditedMessage } from '@rocket.chat/core-typings';                                                                                                                                                            │
+│ import type { MessageUrl, IMessage, MessageTypesValues, IUser, IRoom, AtLeast } from '@rocket.chat/core-typings';                                                                                                       │
+│ import { Messages, Rooms } from '@rocket.chat/models';                                                                                                                                                                  │
+│                                                                                                                                                                                                                         │
+│ import { OEmbed } from './hooks/AfterSaveOEmbed';                                                                                                                                                                       │
+│ import { deleteMessage } from '../../../app/lib/server/functions/deleteMessage';                                                                                                                                        │
+│ import { parseUrlsInMessage } from '../../../app/lib/server/functions/parseUrlsInMessage';                                                                                                                              │
+│ import { sendMessage } from '../../../app/lib/server/functions/sendMessage';                                                                                                                                            │
+│ import { updateMessage } from '../../../app/lib/server/functions/updateMessage';                                                                                                                                        │
+│ import { notifyOnRoomChangedById, notifyOnMessageChange } from '../../../app/lib/server/lib/notifyListener';                                                                                                            │
+│ import { notifyUsersOnSystemMessage } from '../../../app/lib/server/lib/notifyUsersOnMessage';                                                                                                                          │
+│ import { executeSendMessage } from '../../../app/lib/server/methods/sendMessage';                                                                                                                                       │
+│ import { executeSetReaction } from '../../../app/reactions/server/setReaction';                                                                                                                                         │
+│ import { settings } from '../../../app/settings/server';                                                                                                                                                                │
+│ import { getUserAvatarURL } from '../../../app/utils/server/getUserAvatarURL';                                                                                                                                          │
+│ import { BeforeSaveCannedResponse } from '../../../ee/server/hooks/messages/BeforeSaveCannedResponse';                                                                                                                  │
+│ import { FederationMatrixInvalidConfigurationError } from '../federation/utils';                                                                                                                                        │
+│ import { FederationActions } from './hooks/BeforeFederationActions';                                                                                                                                                    │
+│ import { BeforeSaveBadWords } from './hooks/BeforeSaveBadWords';                                                                                                                                                        │
+│ import { BeforeSaveCheckMAC } from './hooks/BeforeSaveCheckMAC';                                                                                                                                                        │
+│ import { BeforeSaveJumpToMessage } from './hooks/BeforeSaveJumpToMessage';                                                                                                                                              │
+│ import { BeforeSaveMarkdownParser } from './hooks/BeforeSaveMarkdownParser';                                                                                                                                            │
+│ import { mentionServer } from './hooks/BeforeSaveMentions';                                                                                                                                                             │
+│ import { BeforeSavePreventMention } from './hooks/BeforeSavePreventMention';                                                                                                                                            │
+│ import { BeforeSaveSpotify } from './hooks/BeforeSaveSpotify';                                                                                                                                                          │
+│ import { closeUnclosedCodeBlock } from '../../../lib/utils/closeUnclosedCodeBlock';                                                                                                                                     │
+│ import { shouldBreakInVersion } from '../../lib/shouldBreakInVersion';                                                                                                                                                  │
+│                                                                                                                                                                                                                         │
+│ const disableMarkdownParser = ['yes', 'true'].includes(String(process.env.DISABLE_MESSAGE_PARSER).toLowerCase());                                                                                                       │
+│                                                                                                                                                                                                                         │
+│ export class MessageService extends ServiceClassInternal implements IMessageService {                                                                                                                                   │
+│     protected name = 'message';                                                                                                                                                                                         │
+│                                                                                                                                                                                                                         │
+│     private preventMention: BeforeSavePreventMention;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private badWords: BeforeSaveBadWords;                                                                                                                                                                               │
+│                                                                                                                                                                                                                         │
+│     private spotify: BeforeSaveSpotify;                                                                                                                                                                                 │
+│                                                                                                                                                                                                                         │
+│     private jumpToMessage: BeforeSaveJumpToMessage;                                                                                                                                                                     │
+│                                                                                                                                                                                                                         │
+│     private cannedResponse: BeforeSaveCannedResponse;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private markdownParser: BeforeSaveMarkdownParser;                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private checkMAC: BeforeSaveCheckMAC;                                                                                                                                                                               │
+│                                                                                                                                                                                                                         │
+│     override async created() {                                                                                                                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     private async configureBadWords() {                                                                                                                                                                                 │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async sendMessage({ fromId, rid, msg }: { fromId: string; rid: string; msg: string }): Promise<IMessage> {                                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async saveMessageFromFederation({                                                                                                                                                                                   │
+│         fromId,                                                                                                                                                                                                         │
+│         rid,                                                                                                                                                                                                            │
+│         federation_event_id,                                                                                                                                                                                            │
+│         msg,                                                                                                                                                                                                            │
+│         e2e_content,                                                                                                                                                                                                    │
+│         file,                                                                                                                                                                                                           │
+│         files,                                                                                                                                                                                                          │
+│         attachments,                                                                                                                                                                                                    │
+│         thread,                                                                                                                                                                                                         │
+│         ts,                                                                                                                                                                                                             │
+│     }: {                                                                                                                                                                                                                │
+│         fromId: string;                                                                                                                                                                                                 │
+│         rid: string;                                                                                                                                                                                                    │
+│         federation_event_id: string;                                                                                                                                                                                    │
+│         msg?: string;                                                                                                                                                                                                   │
+│         e2e_content?: {                                                                                                                                                                                                 │
+│             algorithm: 'm.megolm.v1.aes-sha2';                                                                                                                                                                          │
+│             ciphertext: string;                                                                                                                                                                                         │
+│         };                                                                                                                                                                                                              │
+│         file?: IMessage['file'];                                                                                                                                                                                        │
+│         files?: IMessage['files'];                                                                                                                                                                                      │
+│         attachments?: IMessage['attachments'];                                                                                                                                                                          │
+│         thread?: { tmid: string; tshow: boolean };                                                                                                                                                                      │
+│         ts: Date;                                                                                                                                                                                                       │
+│     }): Promise<IMessage> {                                                                                                                                                                                             │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async sendMessageWithValidation(user: IUser, message: Partial<IMessage>, room: Partial<IRoom>, upsert = false): Promise<IMessage> {                                                                                 │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async deleteMessage(user: IUser, message: IMessage): Promise<void> {                                                                                                                                                │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async updateMessage(message: IMessage, user: IUser, originalMsg?: IMessage, previewUrls?: string[]): Promise<void> {                                                                                                │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+│                                                                                                                                                                                                                         │
+│     async reactToMessage(userId: string, reaction: string, messageId: IMessage['_id'], shouldReact?: boolean): Promise<void> {                                                                                          │
+│         / Implementation Hidden /                                                                                                                                                                                       │
+│     }                                                                                                                                                                                                                   │
+
+│                                                                                                                                                                                                                         │
+│     async saveSystemMessageAndNotifyUser<T = IMessage>(                                                                                                                                                                 │
+│ Output too long and was saved to: /Users/echoooooo/.gemini/tmp/gsoc-rocket-chat/tool-outputs/session-464cf724-af6e-4afe-a944-9c061affc948/mcp_rocket-ast-analyzer_implement_c88f78vt.txt                                │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ On the client side of Rocket.Chat, the process of sending a message follows a
+ ⠴ View and edit settings with the /settings editor… (esc to cancel, 1m 24s)
+
+✦ On the client side of Rocket.Chat, the process of sending a message follows a structured flow from UI interaction to a DDP (Distributed Data Protocol) call. Here is a breakdown of the key steps and components involved:
+
+ > /quit
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                                                                                                                             │
+│  Agent powering down. Goodbye!                                                                                                                                                                                              │
+│                                                                                                                                                                                                                             │
+│  Interaction Summary                                                                                                                                                                                                        │
+│  Session ID:                 464cf724-af6e-4afe-a944-9c061affc948                                                                                                                                                           │
+│  Tool Calls:                 26 ( ✓ 23 x 3 )                                                                                                                                                                                │
+│  Success Rate:               88.5%                                                                                                                                                                                          │
+│  User Agreement:             100.0% (26 reviewed)                                                                                                                                                                           │
+│                                                                                                                                                                                                                             │
+│  Performance                                                                                                                                                                                                                │
+│  Wall Time:                  15m 5s                                                                                                                                                                                         │
+│  Agent Active:               3m 22s                                                                                                                                                                                         │
+│    » API Time:               1m 33s (46.3%)                                                                                                                                                                                 │
+│    » Tool Time:              1m 48s (53.7%)                                                                                                                                                                                 │
+│                                                                                                                                                                                                                             │
+│  Model                   Reqs   Input Tokens   Cache Reads  Output Tokens                                                                                                                                                   │
+│  ────────────────────────────────────────────────────────────────────────                                                                                                                                                   │
+│  gemini-2.5-flash-lite      1          3,162             0             86                                                                                                                                                   │
+│  gemini-3-flash-preview    27        234,774       822,550          2,738                                                                                                                                                   │
+│                                                                                                                                                                                                                             │
+│  Savings Highlight: 822,550 (77.6%) of input tokens were served from the cache, reducing costs.                                                                                                                             │
+│                                                                                                                                                                                                                             │
+│  To resume this session: gemini --resume 464cf724-af6e-4afe-a944-9c061affc948                                                                                                                                               │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
