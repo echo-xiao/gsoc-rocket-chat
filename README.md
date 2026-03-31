@@ -1,16 +1,36 @@
 # Rocket.Chat Code Analyzer
 
-GSoC project — an MCP server that lets Gemini CLI explore the Rocket.Chat codebase without reading full source files.
+GSoC 2026 — graph-native code navigation for Rocket.Chat's 4M+ line monorepo.
 
-**Core idea:** use ts-morph to strip function bodies from every `.ts` file, build an in-memory index with PageRank + BM25, and expose 7 MCP tools over stdio. Gemini gets ~4x token savings and all built-in file tools are disabled — it can only navigate via MCP.
+## Problem
 
-## Thoughts
+LLM agents analyzing large codebases accumulate context query after query, quickly exhausting free-tier token budgets. The root cause: code exploration is treated as a **retrieval problem** (rank documents by similarity), but it is actually a **navigation problem** (follow dependency edges from an entry point).
 
-This is a Search Evaluation problem - focusing on retrival and recall.
-1. The tools are straightforward now, but the real challenge is getting the LLM to actually follow instructions and invoke them reliably.
-2. For the last version, I/O latency was killing me. Gemini would "over-think" while waiting for a response, padding the context and burning through tokens. I fixed this by pre-warming an offline index, allowing for instant in-memory lookups.
-3. I also improved tool depth. I moved from a basic grep to a 3-tier fallback strategy to ensure comprehensive coverage without needing external search.
-4. Last but not least, the evaluation suite enables me to tracking token burn versus precision gains. 
+Rocket.Chat compounds this with five patterns invisible to standard import analysis:
+
+| Pattern | Why standard analysis fails |
+|---------|----------------------------|
+| Meteor string-keyed method dispatch | `sdk.call('sendMessage')` target is a string literal |
+| Event-driven callbacks | `callbacks.run/add('afterSaveMessage')` — no import between emit and handler |
+| Symbol name collisions | `sendMessage` has 6+ definitions across client / server / packages |
+| Blaze-to-React migration gaps | `.html` template names don't appear in TypeScript imports |
+| Hook-based EE extensions | EE modules extend core via `callbacks.add`, not subclassing |
+
+## Solution
+
+An offline indexer builds a typed dependency graph (11 edge kinds). Three MCP tools expose it to Gemini CLI. A Constitution encodes architecture knowledge as navigation rules. An evaluator closes the loop.
+
+```
+Source (.ts/.tsx)
+  → hasher.ts      incremental MD5, skip unchanged
+  → skeleton.ts    AST parse: signatures + 11 typed edges
+  → embedder.ts    Gemini API: symbol → float32[768]
+  → GLOBAL_INDEX   symbols · callGraph · fileDependents · embeddings
+        ↓
+  Constitution (system prompt) + MCP tools → Gemini LLM
+        ↓
+  Evaluator (5 metrics) → eval report → targeted fix → repeat
+```
 
 ## Setup
 
@@ -18,82 +38,55 @@ This is a Search Evaluation problem - focusing on retrival and recall.
 git clone https://github.com/echo-xiao/gsoc-rocket-chat.git
 cd gsoc-rocket-chat
 npm install
-
-# Rocket.Chat source goes here
 git clone https://github.com/RocketChat/Rocket.Chat.git
-
+export GEMINI_API_KEY=your_key
 npm start
 ```
 
-First run scans the full codebase and generates skeletons. Subsequent runs are incremental — only changed files are reprocessed (MD5 hash cache).
+## MCP Tools
 
-Add to Gemini CLI MCP config:
-
-```json
-{
-  "mcpServers": {
-    "rocket-ast-analyzer": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/gsoc-rocket-chat/src/indexer/index.ts"]
-    }
-  }
-}
-```
-
-## Tools
-
-| Tool | What it does |
+| Tool | Description |
 |------|-------------|
-| `search_symbol` | Find where a symbol is defined. Tries exact match → prefix → fuzzy+BM25+PageRank, returns top 5 ranked results. |
-| `search_mcp_prewarm_cache` | Find files by path fragment against the in-memory file set. |
-| `get_file_skeleton` | Return a file's skeleton — types, interfaces, signatures, no bodies. |
-| `read_symbol_details` | Return symbol skeleton + up to 5 callee skeletons. Disambiguates same-name symbols via caller's import graph. |
-| `find_references` | BFS over the dependency graph, results grouped by depth (max 5 levels). |
-| `get_codebase_topology` | Top-K symbols by PageRank score, or list all files that import a given file. |
-| `get_system_config` | Index stats, token compression rate, current session call metrics. |
+| `search(query, layer?, question?)` | Fuzzy symbol search reranked by embedding similarity (0.4 × fuzzy + 0.6 × cosine). Supports `client`/`server` layer filter. |
+| `graph(symbol, direction, depth?, edgeTypes?, question?)` | BFS downstream or upstream. When `question` is provided, applies semantic pruning — edges with cosine similarity < 0.1 are dropped. |
+| `implement(symbol, filename)` | Full source + up to 5 callee skeletons. Capped at 3 calls per question. |
 
-## Session recording & eval
+## Question types → tool strategy
 
-```bash
-alias gemini='npx tsx /path/to/gsoc-rocket-chat/src/eval/session-recorder.ts'
-```
+| Type | Example | Strategy |
+|------|---------|---------|
+| Architecture | "How does message sending work end-to-end?" | `search(entry)` → `graph(down)` |
+| Locate | "Where is the rate limiter configured?" | `search(keyword)` → `implement` |
+| Pattern | "How do I register a new REST endpoint?" | `search` existing instance → `implement` |
+| Routing | "How does a DDP method call reach its handler?" | `search(dispatcher)` → `graph(down, edgeTypes=[...])` |
+| Impact | "What breaks if I change sendMessage?" | `search(target)` → `graph(up)` → `implement` top callers |
 
-Wraps Gemini CLI with `script` to record the full terminal session, then auto-generates logs and an eval report after each session.
+## Evaluator metrics
 
-Output:
-- `logs/session-*.txt` — clean extracted conversation
-- `logs/session-*.raw.txt` — full ANSI-stripped terminal output
-- `logs/eval-*.md` — 3-part eval report (session summary / metrics / turn-by-turn breakdown)
-
-Metrics: SNR, repeat call rate, cost per task, recall@K, ambiguity resolution, shadow variable interference, reference depth.
-
-## Architecture
-
-![architecture](https://github.com/user-attachments/assets/73aec555-72a2-45a4-9c61-6a24825ca3be)
-
+| Metric | Threshold | What it catches |
+|--------|-----------|----------------|
+| File hit rate | ≥ 95% | Wrong files retrieved |
+| Symbol coverage | 100% | Key symbol missing from answer |
+| Retrieval order | ≥ 80% | Entry point found too late |
+| Tool call count | ≤ 10 | Agent taking too many steps |
+| Implement share | ≤ 30% | Over-relying on full source reads |
 
 ## Project structure
 
 ```
 src/
-  indexer/
-    index.ts              MCP server entry: pre-warm → load/build index → serve
-    skeleton.ts           AST dehydration — strips bodies, extracts symbol calls
-    hasher.ts             MD5 incremental cache
-    centrality.ts         PageRank over file dependency graph (graphology)
-    state.ts              GLOBAL_INDEX definition + BM25 term index builder
-  pipeline/
-    retriever.ts          fuzzy+BM25 hybrid search + callee context builder
-    reranker.ts           intent-aware reranking (definition vs implementation)
-  tools/
-    registry.ts           MCP tool definitions + all request handlers
-    orchestrator.ts       re-exports registry (avoids circular deps)
-  storage/
-    local-db.ts           serialize/deserialize GLOBAL_INDEX to output/.global_index.json
+  indexer/        index.ts · skeleton.ts · hasher.ts · embedder.ts · state.ts
+  config.ts       paths and constants
+  retriever.ts    search() · getContext() · getImplementation()
+  registry.ts     MCP tool handlers
+  local-db.ts     GLOBAL_INDEX persistence
   eval/
-    session-recorder.ts   record sessions, generate eval reports
-    token-analyzer.ts     SNR / repeat call rate / cost per task
-    precision-evaluator.ts  recall@K / ambiguity resolution / shadow vars / ref depth
-output/                   generated skeletons, mappings, index cache (gitignored)
-logs/                     session logs, eval reports (gitignored)
+    session-recorder.ts   record Gemini sessions (tool calls + AI output)
+    evaluator.ts          score sessions against 5 metrics
+    testcases.json        ground truth: questions + expected files/symbols
+    claude_answers.md     Claude baseline (no constitution, for comparison)
+docs/
+  constitution.md   navigation rules injected as system prompt
+bin/gemini          session recording wrapper
+logs/               session logs and eval reports
 ```
