@@ -1,6 +1,6 @@
 # Rocket.Chat Code Analyzer
 
-GSoC 2026 — graph-native code navigation for Rocket.Chat's 4M+ line monorepo.
+GSoC 2026 — graph-native code navigation for Rocket.Chat's 4M+ line monorepo. Here is my proposal: https://docs.google.com/document/d/19hv5TVLv8ArlPvlQVP7VDv7AdGoZqzgmHHSy6p1RgvY/edit?usp=sharing
 
 ## Problem
 
